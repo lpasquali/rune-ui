@@ -1,0 +1,18 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://github.com/lpasquali/rune-ui/blob/main/.vex/permanent.openvex.json",
+  "author": "lpasquali",
+  "role": "Project Maintainer",
+  "timestamp": "2026-04-04T00:00:00Z",
+  "last_updated": "2026-04-04T00:00:00Z",
+  "version": "1",
+  "statements": [
+    {
+      "vulnerability": { "name": "CVE-2005-2541" },
+      "products": [{ "@id": "pkg:deb/debian/tar" }],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Debian: intended behaviour, will not fix in any release."
+    }
+  ]
+}
