@@ -1,5 +1,6 @@
 import asyncio
 import os
+from typing import Any, AsyncGenerator
 
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, StreamingResponse
@@ -18,10 +19,10 @@ api_client = RuneApiClient(base_url=RUNE_API_URL)
 
 
 @app.get("/api/jobs/{job_id}/logs")
-async def stream_job_logs(request: Request, job_id: str):
+async def stream_job_logs(request: Request, job_id: str) -> StreamingResponse:
     """SSE endpoint to stream event logs from the Brain to the UI."""
 
-    async def event_generator():
+    async def event_generator() -> AsyncGenerator[str, None]:
         last_event_id = 0
         while True:
             if await request.is_disconnected():
@@ -34,9 +35,11 @@ async def stream_job_logs(request: Request, job_id: str):
                 if len(events) > last_event_id:
                     for i in range(last_event_id, len(events)):
                         event = events[i]
+                        ts = event.get("timestamp", "")
+                        name = event.get("name", "")
                         msg = (
-                            f'<div><span style="color: var(--base01)">[{event["timestamp"]}]</span>'
-                            f' <span style="color: var(--yellow)">{event["name"]}</span>:'
+                            f'<div><span style="color: var(--base01)">[{ts}]</span>'
+                            f' <span style="color: var(--yellow)">{name}</span>:'
                             f' {event.get("message", "")}</div>'
                         )
                         yield f"data: {msg}\n\n"
@@ -48,7 +51,7 @@ async def stream_job_logs(request: Request, job_id: str):
                     break
 
             except Exception as exc:
-                yield f'data: <div><span style="color: var(--red)">Log Error: {str(exc)}</span></div>\n\n'
+                yield f'data: <div><span style="color: var(--red)">Log Error: {exc}</span></div>\n\n'
                 break
 
             await asyncio.sleep(1)
@@ -57,23 +60,24 @@ async def stream_job_logs(request: Request, job_id: str):
 
 
 @app.get("/", response_class=HTMLResponse)
-async def index(request: Request):
-    return templates.TemplateResponse("base.html", {"request": request})
+async def index(request: Request) -> Any:
+    return templates.TemplateResponse(request, "base.html")
 
 
 @app.get("/api/status", response_class=HTMLResponse)
-async def get_status(request: Request):
+async def get_status(request: Request) -> str:
     try:
         health = await api_client.get_health()
-        status_color = "var(--green)" if health.get("status") == "ok" else "var(--red)"
-        return f'<span style="color: {status_color}">API STATUS: {health.get("status", "unknown").upper()}</span>'
+        if health.get("status") == "ok":
+            return '<span style="color: var(--green)">API STATUS: ONLINE</span>'
+        return '<span style="color: var(--red)">API STATUS: DEGRADED</span>'
     except Exception:
         return '<span style="color: var(--red)">API STATUS: OFFLINE</span>'
 
 
 @app.get("/benchmarks", response_class=HTMLResponse)
-async def get_benchmarks_page(request: Request):
-    return templates.TemplateResponse("benchmarks.html", {"request": request})
+async def get_benchmarks_page(request: Request) -> Any:
+    return templates.TemplateResponse(request, "benchmarks.html")
 
 
 @app.post("/benchmarks/estimate", response_class=HTMLResponse)
@@ -83,9 +87,9 @@ async def get_benchmark_estimate(
     vastai: bool = Form(False),
     max_dph: float = Form(0.0),
     local_hardware: bool = Form(False),
-):
+) -> Any:
     """BFF logic to fetch and display the pre-flight cost estimate."""
-    payload = {
+    payload: dict[str, Any] = {
         "model": model,
         "vastai": vastai,
         "max_dph": max_dph,
@@ -97,13 +101,11 @@ async def get_benchmark_estimate(
 
     try:
         estimate = await api_client.get_estimate(payload)
-        return templates.TemplateResponse(
-            "estimate_modal.html", {"request": request, "estimate": estimate}
-        )
+        return templates.TemplateResponse(request, "estimate_modal.html", {"estimate": estimate})
     except Exception as exc:
         return (
             f'<div class="modal" style="border-color: var(--red)">'
-            f"<h3>Estimation Error</h3><p>{str(exc)}</p>"
+            f"<h3>Estimation Error</h3><p>{exc}</p>"
             f'<button hx-get="/benchmarks" hx-target="#main">Back</button></div>'
         )
 
@@ -114,9 +116,9 @@ async def submit_benchmark_job(
     model: str = Form(...),
     vastai: bool = Form(False),
     max_dph: float = Form(0.0),
-):
+) -> Any:
     """BFF logic to submit a job to the RUNE core and show the tracker."""
-    payload = {
+    payload: dict[str, Any] = {
         "vastai": vastai,
         "max_dph": max_dph,
         "model": model,
@@ -134,15 +136,13 @@ async def submit_benchmark_job(
     try:
         job_info = await api_client.submit_job("benchmark", payload)
         job_id = job_info.get("job_id")
-        return templates.TemplateResponse(
-            "job_tracker.html", {"request": request, "job_id": job_id}
-        )
+        return templates.TemplateResponse(request, "job_tracker.html", {"job_id": job_id})
     except Exception as exc:
-        return f'<div class="card" style="border-color: var(--red)"><h3>Submission Failed</h3><p>{str(exc)}</p></div>'
+        return f'<div class="card" style="border-color: var(--red)"><h3>Submission Failed</h3><p>{exc}</p></div>'
 
 
 @app.get("/api/jobs/{job_id}/status", response_class=HTMLResponse)
-async def poll_job_status(request: Request, job_id: str):
+async def poll_job_status(request: Request, job_id: str) -> str:
     """Poll the RUNE API for job status updates via HTMX."""
     try:
         status_info = await api_client.get_job_status(job_id)
@@ -161,22 +161,29 @@ async def poll_job_status(request: Request, job_id: str):
             f'<p>{status_info.get("message", "")}</p></div>'
         )
     except Exception as exc:
-        return f'<p style="color: var(--red)">Error polling status: {str(exc)}</p>'
+        return f'<p style="color: var(--red)">Error polling status: {exc}</p>'
 
 
 @app.get("/config", response_class=HTMLResponse)
-async def get_config(request: Request):
+async def get_config(request: Request) -> str:
     return '<div class="card"><h2>Configuration</h2><p>Manage Vast.ai templates and Ollama endpoints.</p></div>'
 
 
+@app.get("/reports", response_class=HTMLResponse)
+async def get_reports_page(request: Request) -> Any:
+    """Display historical benchmark reports."""
+    try:
+        reports_data = await api_client.get_reports()
+        return templates.TemplateResponse(request, "reports.html", {"reports": reports_data})
+    except Exception as exc:
+        return f'<div class="card" style="border-color: var(--red)"><h3>Reports Error</h3><p>{exc}</p></div>'
+
+
 @app.get("/reports/{job_id}", response_class=HTMLResponse)
-async def view_report(request: Request, job_id: str):
+async def view_report(request: Request, job_id: str) -> Any:
     """BFF logic to fetch and display a specific historical report."""
     try:
         report = await api_client.get_report_content(job_id)
-        return templates.TemplateResponse(
-            "report_view.html", {"request": request, "report": report}
-        )
+        return templates.TemplateResponse(request, "report_view.html", {"report": report})
     except Exception as exc:
-        return f'<div class="card" style="border-color: var(--red)"><h3>Report Error</h3><p>{str(exc)}</p></div>'
-
+        return f'<div class="card" style="border-color: var(--red)"><h3>Report Error</h3><p>{exc}</p></div>'
