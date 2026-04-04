@@ -292,3 +292,108 @@ def test_api_client_get_vastai_models() -> None:
         assert "models" in result
 
     asyncio.run(_run())
+
+
+def _make_httpx_mock(json_data: dict) -> "tuple[Any, Any]":
+    """Helper: returns (mock_async_client, patch_target)."""
+    from unittest.mock import MagicMock, patch
+
+    mock_response = MagicMock()
+    mock_response.json.return_value = json_data
+
+    mock_async_client = AsyncMock()
+    mock_async_client.__aenter__.return_value = mock_async_client
+    mock_async_client.__aexit__.return_value = None
+    mock_async_client.get.return_value = mock_response
+    mock_async_client.post.return_value = mock_response
+    return mock_async_client, mock_response
+
+
+def test_api_client_get_health_impl() -> None:
+    import asyncio
+
+    from app.api_client import RuneApiClient
+
+    async def _run() -> None:
+        ac, _ = _make_httpx_mock({"status": "ok"})
+        with patch("app.api_client.httpx.AsyncClient", return_value=ac):
+            c = RuneApiClient(base_url="http://x")
+            result = await c.get_health()
+        assert result["status"] == "ok"
+
+    asyncio.run(_run())
+
+
+def test_api_client_get_estimate_impl() -> None:
+    import asyncio
+
+    from app.api_client import RuneApiClient
+
+    async def _run() -> None:
+        ac, _ = _make_httpx_mock({"projected_cost_usd": 5.0})
+        with patch("app.api_client.httpx.AsyncClient", return_value=ac):
+            c = RuneApiClient(base_url="http://x")
+            result = await c.get_estimate({"model": "test"})
+        assert "projected_cost_usd" in result
+
+    asyncio.run(_run())
+
+
+def test_api_client_submit_job_impl() -> None:
+    import asyncio
+
+    from app.api_client import RuneApiClient
+
+    async def _run() -> None:
+        ac, _ = _make_httpx_mock({"job_id": "abc"})
+        with patch("app.api_client.httpx.AsyncClient", return_value=ac):
+            c = RuneApiClient(base_url="http://x")
+            result = await c.submit_job("benchmark", {"vastai": True})
+        assert result["job_id"] == "abc"
+
+    asyncio.run(_run())
+
+
+def test_api_client_get_job_status_impl() -> None:
+    import asyncio
+
+    from app.api_client import RuneApiClient
+
+    async def _run() -> None:
+        ac, _ = _make_httpx_mock({"status": "succeeded"})
+        with patch("app.api_client.httpx.AsyncClient", return_value=ac):
+            c = RuneApiClient(base_url="http://x")
+            result = await c.get_job_status("job-1")
+        assert result["status"] == "succeeded"
+
+    asyncio.run(_run())
+
+
+def test_api_client_get_reports_impl() -> None:
+    import asyncio
+
+    from app.api_client import RuneApiClient
+
+    async def _run() -> None:
+        ac, _ = _make_httpx_mock({"events": []})
+        with patch("app.api_client.httpx.AsyncClient", return_value=ac):
+            c = RuneApiClient(base_url="http://x")
+            result = await c.get_reports()
+        assert "events" in result
+
+    asyncio.run(_run())
+
+
+def test_api_client_get_report_content_impl() -> None:
+    import asyncio
+
+    from app.api_client import RuneApiClient
+
+    async def _run() -> None:
+        ac, _ = _make_httpx_mock({"job_id": "r1", "result": "ok"})
+        with patch("app.api_client.httpx.AsyncClient", return_value=ac):
+            c = RuneApiClient(base_url="http://x")
+            result = await c.get_report_content("r1")
+        assert result["job_id"] == "r1"
+
+    asyncio.run(_run())
