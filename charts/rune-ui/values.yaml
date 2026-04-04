@@ -1,0 +1,28 @@
+# Default values for rune-ui.
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/lpasquali/rune-ui
+  pullPolicy: IfNotPresent
+  tag: ""
+
+service:
+  type: ClusterIP
+  port: 8080
+
+env:
+  RUNE_API_URL: "http://rune-api.default.svc.cluster.local:8080"
+  RUNE_API_TENANT: "default"
+
+# -- gVisor / Kata kernel-level isolation (Issue #12).
+# When enabled, a RuntimeClass resource is created and the pod spec is wired
+# with runtimeClassName so all RUNE UI containers run under the specified
+# sandboxed runtime (e.g. gVisor runsc).
+runtimeClass:
+  # -- Set to true to create the RuntimeClass object and apply it to the pod.
+  enabled: false
+  # -- Name of the RuntimeClass (must match the installed handler on the node).
+  name: gvisor
+  # -- The low-level runtime handler name registered with containerd/CRI-O.
+  handler: runsc

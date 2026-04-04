@@ -1,11 +1,16 @@
 import asyncio
+import base64
+import hashlib
+import hmac
 import html
+import json
 import logging
 import os
+import secrets
 from typing import Any, AsyncGenerator
 
 from fastapi import FastAPI, Form, Request
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -21,10 +26,24 @@ templates = Jinja2Templates(directory="app/templates")
 RUNE_API_URL = os.environ.get("RUNE_API_URL", "http://localhost:8080")
 api_client = RuneApiClient(base_url=RUNE_API_URL)
 
+# Per-process HMAC key used to sign SSE log chunks (Issue #11).
+_log_session_key: bytes = secrets.token_bytes(32)
+
+
+def _sign_log_event(payload: str) -> str:
+    """Return the hex-encoded HMAC-SHA256 signature for a log event payload."""
+    return hmac.new(_log_session_key, payload.encode(), hashlib.sha256).hexdigest()
+
+
+@app.get("/api/log-session-key")
+async def get_log_session_key() -> JSONResponse:
+    """Return the base64-encoded HMAC-SHA256 session key for client-side log verification."""
+    return JSONResponse({"key": base64.b64encode(_log_session_key).decode()})
+
 
 @app.get("/api/jobs/{job_id}/logs")
 async def stream_job_logs(request: Request, job_id: str) -> StreamingResponse:
-    """SSE endpoint to stream event logs from the Brain to the UI."""
+    """SSE endpoint to stream HMAC-signed event logs from the Brain to the UI (Issue #11)."""
 
     async def event_generator() -> AsyncGenerator[str, None]:
         last_event_id = 0
@@ -46,17 +65,22 @@ async def stream_job_logs(request: Request, job_id: str) -> StreamingResponse:
                             f' <span style="color: var(--yellow)">{name}</span>:'
                             f' {html.escape(str(event.get("message", "")))}</div>'
                         )
-                        yield f"data: {msg}\n\n"
+                        sig = _sign_log_event(msg)
+                        yield f"data: {json.dumps({'html': msg, 'sig': sig, 'seq': i})}\n\n"
                     last_event_id = len(events)
 
                 job_status = await api_client.get_job_status(job_id)
                 if job_status.get("status") in ["succeeded", "failed", "cancelled"]:
-                    yield "data: <div><hr><strong>STREAM ENDED</strong></div>\n\n"
+                    end_msg = "<div><hr><strong>STREAM ENDED</strong></div>"
+                    sig = _sign_log_event(end_msg)
+                    yield f"data: {json.dumps({'html': end_msg, 'sig': sig, 'seq': last_event_id})}\n\n"
                     break
 
             except Exception:
                 log.exception("Error streaming logs for job %s", job_id)
-                yield 'data: <div><span style="color: var(--red)">Log stream interrupted.</span></div>\n\n'
+                err_msg = '<div><span style="color: var(--red)">Log stream interrupted.</span></div>'
+                sig = _sign_log_event(err_msg)
+                yield f"data: {json.dumps({'html': err_msg, 'sig': sig, 'seq': -1})}\n\n"
                 break
 
             await asyncio.sleep(1)
@@ -106,7 +130,11 @@ async def get_benchmark_estimate(
 
     try:
         estimate = await api_client.get_estimate(payload)
-        return templates.TemplateResponse(request, "estimate_modal.html", {"estimate": estimate})
+        return templates.TemplateResponse(
+            request,
+            "estimate_modal.html",
+            {"estimate": estimate, "model": model, "vastai": vastai, "max_dph": max_dph},
+        )
     except Exception:
         log.exception("Estimation failed")
         return (
