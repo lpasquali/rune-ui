@@ -397,3 +397,165 @@ def test_api_client_get_report_content_impl() -> None:
         assert result["job_id"] == "r1"
 
     asyncio.run(_run())
+
+
+# ── Issue #10: pre-flight modal carries form params into submit ───────────────
+
+@patch("app.api_client.RuneApiClient.get_estimate", new_callable=AsyncMock)
+def test_estimate_modal_contains_hidden_model_field(mock_estimate: AsyncMock) -> None:
+    """estimate_modal.html must include a hidden 'model' field so CONFIRM can submit it."""
+    mock_estimate.return_value = {
+        "projected_cost_usd": 3.75,
+        "cost_driver": "vastai",
+        "resource_impact": "medium",
+        "local_energy_kwh": 0.0,
+        "warning": None,
+    }
+    response = client.post(
+        "/benchmarks/estimate",
+        data={"model": "mixtral:8x7b", "vastai": "true", "max_dph": "2.5"},
+    )
+    assert response.status_code == 200
+    assert 'name="model"' in response.text
+    assert 'value="mixtral:8x7b"' in response.text
+
+
+@patch("app.api_client.RuneApiClient.get_estimate", new_callable=AsyncMock)
+def test_estimate_modal_contains_hidden_vastai_field(mock_estimate: AsyncMock) -> None:
+    """estimate_modal.html must carry vastai hidden field for job submission."""
+    mock_estimate.return_value = {
+        "projected_cost_usd": 1.0,
+        "cost_driver": "vastai",
+        "resource_impact": "low",
+        "local_energy_kwh": 0.0,
+        "warning": None,
+    }
+    response = client.post(
+        "/benchmarks/estimate",
+        data={"model": "llama3.1:8b", "vastai": "true", "max_dph": "3.0"},
+    )
+    assert response.status_code == 200
+    assert 'name="vastai"' in response.text
+    assert 'name="max_dph"' in response.text
+
+
+# ── Issue #11: tamper-evident log stream ──────────────────────────────────────
+
+def test_log_session_key_endpoint_returns_base64_key() -> None:
+    """GET /api/log-session-key must return a valid base64-encoded 32-byte key."""
+    import base64
+
+    response = client.get("/api/log-session-key")
+    assert response.status_code == 200
+    data = response.json()
+    assert "key" in data
+    key_bytes = base64.b64decode(data["key"])
+    assert len(key_bytes) == 32
+
+
+def test_log_session_key_is_stable_within_process() -> None:
+    """Two calls to /api/log-session-key must return the same key (per-process key)."""
+    r1 = client.get("/api/log-session-key").json()["key"]
+    r2 = client.get("/api/log-session-key").json()["key"]
+    assert r1 == r2
+
+
+def test_sign_log_event_produces_valid_hmac() -> None:
+    """_sign_log_event must return a 64-char hex HMAC-SHA256 digest."""
+    import hashlib
+    import hmac as _hmac
+
+    from app.main import _log_session_key, _sign_log_event
+
+    payload = "<div>test</div>"
+    sig = _sign_log_event(payload)
+    assert len(sig) == 64  # SHA-256 hex = 64 chars
+    expected = _hmac.new(_log_session_key, payload.encode(), hashlib.sha256).hexdigest()
+    assert sig == expected
+
+
+@patch("app.main.asyncio.sleep", new_callable=AsyncMock)
+@patch("app.api_client.RuneApiClient.get_job_status", new_callable=AsyncMock)
+def test_stream_job_logs_events_carry_sig_field(mock_status: AsyncMock, mock_sleep: AsyncMock) -> None:
+    """SSE events must now be JSON objects containing 'html' and 'sig' fields (Issue #11)."""
+    import json as _json
+
+    events_resp = {"events": [{"timestamp": "2026-01-01T00:00:00Z", "name": "step", "message": "ok"}]}
+    status_resp = {"status": "succeeded"}
+    mock_status.side_effect = [events_resp, status_resp]
+    mock_sleep.return_value = None
+
+    with client.stream("GET", "/api/jobs/sig-test/logs") as response:
+        content = b"".join(response.iter_bytes()).decode()
+
+    # Every `data: …` line should be valid JSON with html + sig
+    data_lines = [line[6:] for line in content.splitlines() if line.startswith("data: ")]
+    assert len(data_lines) >= 2  # at least one event + STREAM ENDED
+    for raw in data_lines:
+        parsed = _json.loads(raw)
+        assert "html" in parsed
+        assert "sig" in parsed
+        assert len(parsed["sig"]) == 64  # SHA-256 hex
+
+
+@patch("app.main.asyncio.sleep", new_callable=AsyncMock)
+@patch("app.api_client.RuneApiClient.get_job_status", new_callable=AsyncMock)
+def test_stream_job_logs_sig_verifies_correctly(mock_status: AsyncMock, mock_sleep: AsyncMock) -> None:
+    """HMAC signatures on SSE events must verify against the session key."""
+    import hashlib
+    import hmac as _hmac
+    import json as _json
+
+    from app.main import _log_session_key
+
+    events_resp = {"events": [{"timestamp": "t", "name": "n", "message": "m"}]}
+    status_resp = {"status": "succeeded"}
+    mock_status.side_effect = [events_resp, status_resp]
+    mock_sleep.return_value = None
+
+    with client.stream("GET", "/api/jobs/verify-sig/logs") as response:
+        content = b"".join(response.iter_bytes()).decode()
+
+    data_lines = [line[6:] for line in content.splitlines() if line.startswith("data: ")]
+    for raw in data_lines:
+        parsed = _json.loads(raw)
+        expected_sig = _hmac.new(_log_session_key, parsed["html"].encode(), hashlib.sha256).hexdigest()
+        assert parsed["sig"] == expected_sig, f"Signature mismatch for chunk: {parsed['html']!r}"
+
+
+@patch("app.main.asyncio.sleep", new_callable=AsyncMock)
+@patch("app.api_client.RuneApiClient.get_job_status", new_callable=AsyncMock)
+def test_stream_error_event_carries_sig(mock_status: AsyncMock, mock_sleep: AsyncMock) -> None:
+    """Error SSE events must also carry a valid HMAC signature."""
+    import hashlib
+    import hmac as _hmac
+    import json as _json
+
+    from app.main import _log_session_key
+
+    mock_status.side_effect = Exception("connection lost")
+    mock_sleep.return_value = None
+
+    with client.stream("GET", "/api/jobs/err-sig/logs") as response:
+        content = b"".join(response.iter_bytes()).decode()
+
+    assert "Log stream interrupted" in content
+    data_lines = [line[6:] for line in content.splitlines() if line.startswith("data: ")]
+    assert len(data_lines) == 1
+    parsed = _json.loads(data_lines[0])
+    expected_sig = _hmac.new(_log_session_key, parsed["html"].encode(), hashlib.sha256).hexdigest()
+    assert parsed["sig"] == expected_sig
+
+
+def test_job_tracker_shows_integrity_badge() -> None:
+    """job_tracker.html must contain the security integrity badge element (Issue #11)."""
+    from unittest.mock import AsyncMock, patch
+
+    with patch("app.api_client.RuneApiClient.submit_job", new_callable=AsyncMock) as mock_submit:
+        mock_submit.return_value = {"job_id": "badge-test-job"}
+        response = client.post("/api/jobs/submit", data={"model": "llama3.1:8b"})
+
+    assert response.status_code == 200
+    assert "log-integrity-badge" in response.text
+    assert "Security Integrity" in response.text or "Verifying" in response.text
+
