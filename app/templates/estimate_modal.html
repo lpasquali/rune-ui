@@ -18,8 +18,14 @@
 
     <p style="color: var(--base1)">Scale: ☕ <strong>Coffee</strong> (Low) &rarr; 🏎️ <strong>Industrial</strong> (High)</p>
     
-    <div style="display: flex; gap: 10px; margin-top: 30px;">
-        <button hx-post="/api/jobs/submit" hx-target="#main" hx-vals='{"confirm": true}'>CONFIRM & RUN</button>
-        <button onclick="this.closest('.modal').previousElementSibling.remove(); this.closest('.modal').remove()" style="border-color: var(--red); color: var(--red)">CANCEL</button>
-    </div>
+    <!-- Benchmark execution is blocked until this form is explicitly submitted (Issue #10). -->
+    <form hx-post="/api/jobs/submit" hx-target="#main" style="display: inline;">
+        <input type="hidden" name="model" value="{{ model }}">
+        <input type="hidden" name="vastai" value="{{ 'true' if vastai else 'false' }}">
+        <input type="hidden" name="max_dph" value="{{ max_dph }}">
+        <div style="display: flex; gap: 10px; margin-top: 30px;">
+            <button type="submit">CONFIRM & RUN</button>
+            <button type="button" onclick="this.closest('.modal').previousElementSibling.remove(); this.closest('.modal').remove()" style="border-color: var(--red); color: var(--red)">CANCEL</button>
+        </div>
+    </form>
 </div>
