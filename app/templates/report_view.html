@@ -1,0 +1,19 @@
+<div class="card">
+    <h2 style="color: var(--blue)">Benchmark Report: {{ report.job_id }}</h2>
+    <p><strong>Timestamp:</strong> {{ report.created_at }}</p>
+    <p><strong>Status:</strong> <span style="color: var(--green)">{{ report.status.upper() }}</span></p>
+
+    <div class="card" style="margin-top: 20px; border-color: var(--base01)">
+        <h3>Analysis & Result</h3>
+        <pre style="background: var(--base03); color: var(--base1); padding: 15px; overflow-x: auto; border: 1px solid var(--base02)">{{ report.result | tojson(indent=2) }}</pre>
+    </div>
+
+    {% if report.error %}
+    <div class="card" style="margin-top: 20px; border-color: var(--red)">
+        <h3 style="color: var(--red)">Execution Error</h3>
+        <p>{{ report.error }}</p>
+    </div>
+    {% endif %}
+
+    <button hx-get="/reports" hx-target="#main" style="margin-top: 20px;">BACK TO ARCHIVE</button>
+</div>
