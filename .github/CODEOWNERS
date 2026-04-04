@@ -1,0 +1,8 @@
+# Assign @lpasquali as code owner for .vex/ risk-acceptance documents.
+# Enforcement requires branch protection with "Require review from Code Owners"
+# enabled and required_approving_review_count >= 1.
+# With required_approving_review_count = 0 this rule only requests a review
+# but does NOT block merges. To gate only .vex/ changes, set count to 0 and
+# enable "Require review from Code Owners" — GitHub then enforces 1 approval
+# specifically for PRs touching paths matched by this file.
+/.vex/   @lpasquali
