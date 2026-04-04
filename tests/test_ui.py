@@ -245,3 +245,50 @@ def test_api_client_strips_trailing_slash() -> None:
 
     c = RuneApiClient(base_url="http://example.com/")
     assert c.base_url == "http://example.com"
+
+
+@patch("app.main.asyncio.sleep", new_callable=AsyncMock)
+@patch("app.api_client.RuneApiClient.get_job_status", new_callable=AsyncMock)
+def test_stream_job_logs_multi_iteration(mock_status: AsyncMock, mock_sleep: AsyncMock) -> None:
+    """Stream loops more than once, exercising asyncio.sleep."""
+    # Iteration 1: events=[], status=running → continues (hits asyncio.sleep)
+    # Iteration 2: events=[], status=succeeded → yields STREAM ENDED
+    mock_status.side_effect = [
+        {"events": []},
+        {"status": "running"},
+        {"events": []},
+        {"status": "succeeded"},
+    ]
+    mock_sleep.return_value = None
+
+    with client.stream("GET", "/api/jobs/multi-iter/logs") as response:
+        content = b"".join(response.iter_bytes()).decode()
+
+    assert "STREAM ENDED" in content
+    mock_sleep.assert_called()
+
+
+# ── API client implementation tests ──────────────────────────────────────────
+
+def test_api_client_get_vastai_models() -> None:
+    """Call get_vastai_models through the RuneApiClient with mocked httpx."""
+    import asyncio
+    from unittest.mock import MagicMock, patch
+
+    from app.api_client import RuneApiClient
+
+    async def _run() -> None:
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"models": ["llama3.1:8b"]}
+
+        mock_async_client = AsyncMock()
+        mock_async_client.__aenter__.return_value = mock_async_client
+        mock_async_client.__aexit__.return_value = None
+        mock_async_client.get.return_value = mock_response
+
+        with patch("app.api_client.httpx.AsyncClient", return_value=mock_async_client):
+            c = RuneApiClient(base_url="http://localhost:8080", api_token="tok")
+            result = await c.get_vastai_models()
+        assert "models" in result
+
+    asyncio.run(_run())

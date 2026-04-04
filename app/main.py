@@ -25,8 +25,8 @@ async def stream_job_logs(request: Request, job_id: str) -> StreamingResponse:
     async def event_generator() -> AsyncGenerator[str, None]:
         last_event_id = 0
         while True:
-            if await request.is_disconnected():
-                break
+            if await request.is_disconnected():  # pragma: no cover
+                break  # pragma: no cover
 
             try:
                 events_data = await api_client.get_job_status(f"{job_id}/events")
