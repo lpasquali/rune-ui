@@ -1,5 +1,6 @@
 import asyncio
-import html as html_mod
+import html
+import logging
 import os
 from typing import Any, AsyncGenerator
 
@@ -9,6 +10,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.api_client import RuneApiClient
+
+log = logging.getLogger(__name__)
 
 app = FastAPI(title="RUNE UI")
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -36,12 +39,12 @@ async def stream_job_logs(request: Request, job_id: str) -> StreamingResponse:
                 if len(events) > last_event_id:
                     for i in range(last_event_id, len(events)):
                         event = events[i]
-                        ts = event.get("timestamp", "")
-                        name = event.get("name", "")
+                        ts = html.escape(str(event.get("timestamp", "")))
+                        name = html.escape(str(event.get("name", "")))
                         msg = (
                             f'<div><span style="color: var(--base01)">[{ts}]</span>'
                             f' <span style="color: var(--yellow)">{name}</span>:'
-                            f' {event.get("message", "")}</div>'
+                            f' {html.escape(str(event.get("message", "")))}</div>'
                         )
                         yield f"data: {msg}\n\n"
                     last_event_id = len(events)
@@ -51,9 +54,9 @@ async def stream_job_logs(request: Request, job_id: str) -> StreamingResponse:
                     yield "data: <div><hr><strong>STREAM ENDED</strong></div>\n\n"
                     break
 
-            except Exception as exc:
-                safe_msg = html_mod.escape(str(exc))
-                yield f'data: <div><span style="color: var(--red)">Log Error: {safe_msg}</span></div>\n\n'
+            except Exception:
+                log.exception("Error streaming logs for job %s", job_id)
+                yield 'data: <div><span style="color: var(--red)">Log stream interrupted.</span></div>\n\n'
                 break
 
             await asyncio.sleep(1)
@@ -104,11 +107,12 @@ async def get_benchmark_estimate(
     try:
         estimate = await api_client.get_estimate(payload)
         return templates.TemplateResponse(request, "estimate_modal.html", {"estimate": estimate})
-    except Exception as exc:
+    except Exception:
+        log.exception("Estimation failed")
         return (
-            f'<div class="modal" style="border-color: var(--red)">'
-            f'<h3>Estimation Error</h3><p>{html_mod.escape(str(exc))}</p>'
-            f'<button hx-get="/benchmarks" hx-target="#main">Back</button></div>'
+            '<div class="modal" style="border-color: var(--red)">'
+            "<h3>Estimation Error</h3><p>Unable to compute estimate. Please try again.</p>"
+            '<button hx-get="/benchmarks" hx-target="#main">Back</button></div>'
         )
 
 
@@ -139,9 +143,9 @@ async def submit_benchmark_job(
         job_info = await api_client.submit_job("benchmark", payload)
         job_id = job_info.get("job_id")
         return templates.TemplateResponse(request, "job_tracker.html", {"job_id": job_id})
-    except Exception as exc:
-        safe_exc = html_mod.escape(str(exc))
-        return f'<div class="card" style="border-color: var(--red)"><h3>Submission Failed</h3><p>{safe_exc}</p></div>'
+    except Exception:
+        log.exception("Job submission failed")
+        return '<div class="card" style="border-color: var(--red)"><h3>Submission Failed</h3><p>Could not submit job. Please try again.</p></div>'
 
 
 @app.get("/api/jobs/{job_id}/status", response_class=HTMLResponse)
@@ -157,17 +161,18 @@ async def poll_job_status(request: Request, job_id: str) -> str:
         if status in ["failed", "error", "cancelled"]:
             status_color = "var(--red)"
 
-        safe_jid = html_mod.escape(job_id)
-        safe_status = html_mod.escape(status.upper())
-        safe_msg = html_mod.escape(str(status_info.get("message", "")))
+        safe_jid = html.escape(job_id)
+        safe_status = html.escape(status.upper())
+        safe_msg = html.escape(str(status_info.get("message", "")))
         return (
             f'<div class="card" style="border-left: 5px solid {status_color}">'
             f"<h3>Job: {safe_jid}</h3>"
             f'<p>Status: <span style="color: {status_color}">{safe_status}</span></p>'
-            f'<p>{safe_msg}</p></div>'
+            f"<p>{safe_msg}</p></div>"
         )
-    except Exception as exc:
-        return f'<p style="color: var(--red)">Error polling status: {html_mod.escape(str(exc))}</p>'
+    except Exception:
+        log.exception("Polling failed for job %s", job_id)
+        return '<p style="color: var(--red)">Error polling status. Please retry.</p>'
 
 
 @app.get("/config", response_class=HTMLResponse)
@@ -181,9 +186,9 @@ async def get_reports_page(request: Request) -> Any:
     try:
         reports_data = await api_client.get_reports()
         return templates.TemplateResponse(request, "reports.html", {"reports": reports_data})
-    except Exception as exc:
-        safe_exc = html_mod.escape(str(exc))
-        return f'<div class="card" style="border-color: var(--red)"><h3>Reports Error</h3><p>{safe_exc}</p></div>'
+    except Exception:
+        log.exception("Failed to load reports")
+        return '<div class="card" style="border-color: var(--red)"><h3>Reports Error</h3><p>Unable to load reports.</p></div>'
 
 
 @app.get("/reports/{job_id}", response_class=HTMLResponse)
@@ -192,6 +197,6 @@ async def view_report(request: Request, job_id: str) -> Any:
     try:
         report = await api_client.get_report_content(job_id)
         return templates.TemplateResponse(request, "report_view.html", {"report": report})
-    except Exception as exc:
-        safe_exc = html_mod.escape(str(exc))
-        return f'<div class="card" style="border-color: var(--red)"><h3>Report Error</h3><p>{safe_exc}</p></div>'
+    except Exception:
+        log.exception("Failed to load report %s", job_id)
+        return '<div class="card" style="border-color: var(--red)"><h3>Report Error</h3><p>Unable to load report.</p></div>'
