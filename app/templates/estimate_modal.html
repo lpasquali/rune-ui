@@ -1,0 +1,25 @@
+<div class="overlay" onclick="this.parentElement.remove()"></div>
+<div class="modal">
+    <h2 style="color: var(--orange)">PRE-FLIGHT SPEND ALERT</h2>
+    
+    <div class="card" style="margin-bottom: 20px; border-color: var(--yellow)">
+        <p><strong>Projected Cost:</strong> <span style="font-size: 1.5em; color: var(--green)">${{ estimate.projected_cost_usd }}</span></p>
+        <p><strong>Cost Driver:</strong> {{ estimate.cost_driver.upper() }}</p>
+        <p><strong>Resource Impact:</strong> {{ estimate.resource_impact.upper() }}</p>
+        
+        {% if estimate.local_energy_kwh > 0 %}
+        <p><strong>Energy consumption:</strong> {{ estimate.local_energy_kwh }} kWh</p>
+        {% endif %}
+        
+        {% if estimate.warning %}
+        <p style="color: var(--orange)"><strong>Warning:</strong> {{ estimate.warning }}</p>
+        {% endif %}
+    </div>
+
+    <p style="color: var(--base1)">Scale: ☕ <strong>Coffee</strong> (Low) &rarr; 🏎️ <strong>Industrial</strong> (High)</p>
+    
+    <div style="display: flex; gap: 10px; margin-top: 30px;">
+        <button hx-post="/api/jobs/submit" hx-target="#main" hx-vals='{"confirm": true}'>CONFIRM & RUN</button>
+        <button onclick="this.closest('.modal').previousElementSibling.remove(); this.closest('.modal').remove()" style="border-color: var(--red); color: var(--red)">CANCEL</button>
+    </div>
+</div>

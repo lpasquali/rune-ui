@@ -1,0 +1,34 @@
+<div class="card">
+    <h2>Historical Reports</h2>
+    <p>Viewing latest benchmark events from the archive.</p>
+
+    <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+        <thead>
+            <tr style="border-bottom: 2px solid var(--base02); text-align: left; color: var(--blue)">
+                <th style="padding: 10px;">TIMESTAMP</th>
+                <th>JOB_ID</th>
+                <th>EVENT</th>
+                <th>STATUS</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for report in reports %}
+            <tr style="border-bottom: 1px solid var(--base02)">
+                <td style="padding: 10px; color: var(--base01); font-size: 0.8em">{{ report.timestamp }}</td>
+                <td>{{ report.job_id }}</td>
+                <td style="color: var(--cyan)">{{ report.name }}</td>
+                <td>
+                    <span style="color: var(--green)">SUCCESS</span>
+                </td>
+            </tr>
+            {% endfor %}
+            {% if not reports %}
+            <tr>
+                <td colspan="4" style="padding: 40px; text-align: center; color: var(--base01)">
+                    <em>No archived reports found.</em>
+                </td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
