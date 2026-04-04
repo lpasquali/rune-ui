@@ -556,17 +556,20 @@ jobs:
             HEAD="${{ github.sha }}"
           fi
 
-          SCAN_ARGS=""
+          # Use a bash array so the --log-opts value (which contains spaces) is
+          # passed as a single argument to gitleaks — unquoted string expansion
+          # would cause word-splitting and make --first-parent an unknown flag.
+          SCAN_ARGS=()
           if [ -n "$BASE" ] \
              && [ "$BASE" != "0000000000000000000000000000000000000000" ] \
              && git cat-file -t "$BASE" >/dev/null 2>&1; then
-            SCAN_ARGS="--log-opts=--no-merges --first-parent ${BASE}..${HEAD}"
+            SCAN_ARGS=(--log-opts "--no-merges --first-parent ${BASE}..${HEAD}")
             echo "Range scan: ${BASE}..${HEAD}"
           else
             echo "Base SHA not available — scanning full repository"
           fi
 
-          /tmp/gitleaks detect --redact -v --exit-code=1 $SCAN_ARGS
+          /tmp/gitleaks detect --redact -v --exit-code=1 "${SCAN_ARGS[@]}"
 
   security-licenses:
     name: RuneGate/Security/LicenseCompliance
