@@ -151,3 +151,97 @@ def test_view_report_error(mock_report: AsyncMock) -> None:
     response = client.get("/reports/missing-job")
     assert response.status_code == 200
     assert "Report Error" in response.text
+
+
+# ── Streaming SSE endpoint ────────────────────────────────────────────────────
+
+@patch("app.main.asyncio.sleep", new_callable=AsyncMock)
+@patch("app.api_client.RuneApiClient.get_job_status", new_callable=AsyncMock)
+def test_stream_job_logs_events_and_done(mock_status: AsyncMock, mock_sleep: AsyncMock) -> None:
+    """Stream completes when job reaches succeeded status."""
+    events_resp = {"events": [{"timestamp": "2026-01-01T00:00:00Z", "name": "step", "message": "ok"}]}
+    status_resp = {"status": "succeeded"}
+    mock_status.side_effect = [events_resp, status_resp]
+    mock_sleep.return_value = None
+
+    with client.stream("GET", "/api/jobs/log-test/logs") as response:
+        content = b"".join(response.iter_bytes()).decode()
+
+    assert "STREAM ENDED" in content
+
+
+@patch("app.main.asyncio.sleep", new_callable=AsyncMock)
+@patch("app.api_client.RuneApiClient.get_job_status", new_callable=AsyncMock)
+def test_stream_job_logs_no_events_then_done(mock_status: AsyncMock, mock_sleep: AsyncMock) -> None:
+    """Stream completes when status is succeeded even with no events."""
+    empty_events = {"events": []}
+    status_resp = {"status": "succeeded"}
+    mock_status.side_effect = [empty_events, status_resp]
+    mock_sleep.return_value = None
+
+    with client.stream("GET", "/api/jobs/log-test2/logs") as response:
+        content = b"".join(response.iter_bytes()).decode()
+
+    assert "STREAM ENDED" in content
+
+
+@patch("app.main.asyncio.sleep", new_callable=AsyncMock)
+@patch("app.api_client.RuneApiClient.get_job_status", new_callable=AsyncMock)
+def test_stream_job_logs_error_path(mock_status: AsyncMock, mock_sleep: AsyncMock) -> None:
+    """Stream yields error message when API call raises an exception."""
+    mock_status.side_effect = Exception("connection lost")
+    mock_sleep.return_value = None
+
+    with client.stream("GET", "/api/jobs/err-job/logs") as response:
+        content = b"".join(response.iter_bytes()).decode()
+
+    assert "Log Error" in content
+
+
+@patch("app.main.asyncio.sleep", new_callable=AsyncMock)
+@patch("app.api_client.RuneApiClient.get_job_status", new_callable=AsyncMock)
+def test_stream_job_logs_cancelled(mock_status: AsyncMock, mock_sleep: AsyncMock) -> None:
+    """Stream stops on cancelled status."""
+    mock_status.side_effect = [{"events": []}, {"status": "cancelled"}]
+    mock_sleep.return_value = None
+
+    with client.stream("GET", "/api/jobs/cancelled-job/logs") as response:
+        content = b"".join(response.iter_bytes()).decode()
+
+    assert "STREAM ENDED" in content
+
+
+
+# ── API client unit tests (sync, testing init and structure) ─────────────────
+
+def test_api_client_init_with_explicit_token() -> None:
+    """RuneApiClient stores explicit token in Authorization header."""
+    from app.api_client import RuneApiClient
+
+    c = RuneApiClient(base_url="http://example.com", api_token="explicit-token")
+    assert c.headers.get("Authorization") == "Bearer explicit-token"
+    assert c.base_url == "http://example.com"
+
+
+def test_api_client_init_no_token() -> None:
+    """RuneApiClient has no Authorization header when no token provided."""
+    import os
+
+    from app.api_client import RuneApiClient
+
+    # Ensure no env token is set during this test
+    old = os.environ.pop("RUNE_API_TOKEN", None)
+    try:
+        c = RuneApiClient(base_url="http://example.com")
+        assert "Authorization" not in c.headers
+    finally:
+        if old:
+            os.environ["RUNE_API_TOKEN"] = old
+
+
+def test_api_client_strips_trailing_slash() -> None:
+    """RuneApiClient strips trailing slash from base_url."""
+    from app.api_client import RuneApiClient
+
+    c = RuneApiClient(base_url="http://example.com/")
+    assert c.base_url == "http://example.com"
