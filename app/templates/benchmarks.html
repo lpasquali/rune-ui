@@ -1,0 +1,20 @@
+<div class="card">
+    <h2>Run Benchmark</h2>
+    <form hx-post="/benchmarks/estimate" hx-target="#main" hx-swap="beforeend">
+        <label for="model">LLM Model:</label>
+        <input type="text" id="model" name="model" value="llama3.1:8b" required><br><br>
+        
+        <label>
+            <input type="checkbox" name="vastai" value="true"> Use Vast.ai Provisioning
+        </label><br>
+        
+        <label for="max_dph">Max $/hr (DPH):</label>
+        <input type="number" step="0.01" name="max_dph" value="2.50"><br><br>
+
+        <label>
+            <input type="checkbox" name="local_hardware" value="true"> Use Local Hardware (Airgapped)
+        </label><br><br>
+
+        <button type="submit">Evaluate Cost & Proceed</button>
+    </form>
+</div>

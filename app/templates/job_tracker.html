@@ -1,0 +1,40 @@
+<div class="card">
+    <h2 style="color: var(--blue)">Benchmark Tracker</h2>
+    <p>Tracking execution for <strong>Job ID: {{ job_id }}</strong></p>
+
+    <!-- Polling with HTMX -->
+    <div id="job-status" 
+         hx-get="/api/jobs/{{ job_id }}/status" 
+         hx-trigger="load, every 2s"
+         hx-swap="innerHTML">
+        Connecting to RUNE API...
+    </div>
+
+    <div class="card" style="margin-top: 20px; border-color: var(--base01)">
+        <h3>Live Event Logs</h3>
+        <div id="log-container" 
+             style="background: var(--base03); height: 300px; overflow-y: scroll; padding: 10px; font-size: 0.9em; border: 1px solid var(--base02)">
+             <em>Initializing secure log stream...</em>
+        </div>
+        
+        <script>
+            (function() {
+                const eventSource = new EventSource("/api/jobs/{{ job_id }}/logs");
+                const logContainer = document.getElementById("log-container");
+                
+                eventSource.onmessage = function(event) {
+                    const div = document.createElement("div");
+                    div.innerHTML = event.data;
+                    logContainer.appendChild(div);
+                    logContainer.scrollTop = logContainer.scrollHeight;
+                };
+                
+                eventSource.onerror = function() {
+                    eventSource.close();
+                };
+            })();
+        </script>
+    </div>
+
+    <button hx-get="/benchmarks" hx-target="#main" style="margin-top: 20px;">BACK TO BENCHMARKS</button>
+</div>
