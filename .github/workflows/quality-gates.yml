@@ -175,14 +175,54 @@ jobs:
   # Decoupled from the Python test chain so a Dockerfile-only change still
   # exercises the smoke and SBOM jobs without re-running Python unit tests.
 
-  smoke-cli-api:
-    name: RuneGate/CLI-and-API-Smoke/Python+Containers
-    needs: [changes, security-secrets]
+  build-image:
+    name: RuneGate/Build/Docker-Image-amd64
+    needs: [changes]
     if: needs.changes.outputs.docker == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v3
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push amd64 temp image (same-repo)
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          push: true
+          load: false
+          tags: ghcr.io/lpasquali/rune-ui:ci-${{ github.sha }}-amd64
+          cache-from: type=registry,ref=ghcr.io/lpasquali/rune-ui:buildcache-amd64
+          cache-to: type=registry,ref=ghcr.io/lpasquali/rune-ui:buildcache-amd64,mode=max
+      - name: Build amd64 temp image (fork PR)
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: ghcr.io/lpasquali/rune-ui:ci-${{ github.sha }}-amd64
+
+  smoke-cli-api:
+    name: RuneGate/CLI-and-API-Smoke/Python+Containers
+    needs: [changes, security-secrets, build-image]
+    if: needs.changes.outputs.docker == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
@@ -203,23 +243,15 @@ jobs:
           pip install --prefer-binary -r requirements.txt pytest
       - run: .venv/bin/python -m pytest -p no:cov -o addopts='' tests/ -v --tb=short
 
-      - uses: docker/setup-buildx-action@v4
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build amd64 image and smoke test
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: ./Dockerfile
-          platforms: linux/amd64
-          load: true
-          push: false
-          tags: rune-ui:rune-ci-local
-          cache-from: type=registry,ref=ghcr.io/lpasquali/rune-ui:buildcache
-          cache-to: ${{ github.event_name == 'push' && 'type=registry,ref=ghcr.io/lpasquali/rune-ui:buildcache,mode=max' || '' }}
+      - name: Pull pre-built amd64 image
+        run: |
+          docker pull ghcr.io/lpasquali/rune-ui:ci-${{ github.sha }}-amd64
+          docker tag  ghcr.io/lpasquali/rune-ui:ci-${{ github.sha }}-amd64 rune-ui:rune-ci-local
       - run: |
           set -euo pipefail
           docker run -d --name rune-smoke -e RUNE_API_AUTH_DISABLED=1 -p 18080:8080 rune-ui:rune-ci-local
@@ -246,32 +278,25 @@ jobs:
 
   security-sbom:
     name: RuneGate/Security/SBOM-and-CVE-Policy
-    needs: [changes]
-    if: needs.changes.outputs.docker == 'true'
+    needs: [changes, build-image]
+    if: needs.changes.outputs.docker == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     permissions:
       id-token: write      # required for SLSA provenance attestation
       attestations: write  # required for SLSA provenance attestation
       contents: read
-      packages: write
+      packages: read
     steps:
       - uses: actions/checkout@v6
-      - uses: docker/setup-buildx-action@v4
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build image
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: ./Dockerfile
-          platforms: linux/amd64
-          load: true
-          tags: rune-ui:rune-ci-local
-          cache-from: type=registry,ref=ghcr.io/lpasquali/rune-ui:buildcache
-          cache-to: ${{ github.event_name == 'push' && 'type=registry,ref=ghcr.io/lpasquali/rune-ui:buildcache,mode=max' || '' }}
+      - name: Pull pre-built amd64 image
+        run: |
+          docker pull ghcr.io/lpasquali/rune-ui:ci-${{ github.sha }}-amd64
+          docker tag  ghcr.io/lpasquali/rune-ui:ci-${{ github.sha }}-amd64 rune-ui:rune-ci-local
       - name: Generate SBOMs
         run: |
           set -euo pipefail
@@ -280,8 +305,8 @@ jobs:
       - name: Scan SBOMs — Grype + Trivy (IEC 62443 4-1 ML4 SVV-3 / DM-4)
         run: |
           set -euo pipefail
-          docker run --rm -v "${PWD}:/work" anchore/grype:v0.82.0 -c /work/.grype.yaml sbom:/work/sbom/rune-ui-image.cdx.json --vex /work/.vex/permanent.openvex.json -o json > sbom/rune-ui-grype.json
-          docker run --rm -v "${PWD}:/work" aquasec/trivy:0.65.0 sbom /work/sbom/rune-ui-image.cdx.json --vex /work/.vex/permanent.openvex.json --format json --output /work/sbom/rune-ui-trivy.json --severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+          docker run --rm -v "${PWD}:/work" anchore/grype:v0.82.0 -c /work/.grype.yaml sbom:/work/sbom/rune-ui-image.cdx.json -o json > sbom/rune-ui-grype.json
+          docker run --rm -v "${PWD}:/work" aquasec/trivy:0.65.0 sbom /work/sbom/rune-ui-image.cdx.json --format json --output /work/sbom/rune-ui-trivy.json --severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
       - name: Enforce CVE policy — IEC 62443 4-1 ML4 DM-4
         env:
           BRANCH_NAME: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
@@ -568,16 +593,22 @@ jobs:
           IMAGE_TAG="${REF_SLUG}-${GITHUB_SHA::7}"
           echo "image_name=ghcr.io/lpasquali/rune-ui" >> "$GITHUB_OUTPUT"
           echo "image_tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
-      - name: Build and push rune-ui image
+      - name: Build and push arm64 temp image
         uses: docker/build-push-action@v7
         with:
           context: .
           file: ./Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/arm64
           push: true
-          tags: ${{ steps.meta.outputs.image_name }}:${{ steps.meta.outputs.image_tag }}
-          cache-from: type=registry,ref=ghcr.io/lpasquali/rune-ui:buildcache
-          cache-to: type=registry,ref=ghcr.io/lpasquali/rune-ui:buildcache,mode=max
+          tags: ${{ steps.meta.outputs.image_name }}:ci-${{ github.sha }}-arm64
+          cache-from: type=registry,ref=${{ steps.meta.outputs.image_name }}:buildcache-arm64
+          cache-to: type=registry,ref=${{ steps.meta.outputs.image_name }}:buildcache-arm64,mode=max
+      - name: Create and push multi-arch manifest
+        run: |
+          docker buildx imagetools create \
+            --tag ${{ steps.meta.outputs.image_name }}:${{ steps.meta.outputs.image_tag }} \
+            ${{ steps.meta.outputs.image_name }}:ci-${{ github.sha }}-amd64 \
+            ${{ steps.meta.outputs.image_name }}:ci-${{ github.sha }}-arm64
       - name: Notify rune-charts to sync image tag
         env:
           CROSS_REPO_TOKEN: ${{ secrets.RUNE_CHARTS_BOT_TOKEN }}
@@ -612,6 +643,7 @@ jobs:
       - coverage-python
       - feature-python
       - linting-python
+      - build-image
       - smoke-cli-api
       - security-sbom
       - security-sast
