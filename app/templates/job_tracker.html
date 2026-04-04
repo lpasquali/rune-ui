@@ -11,7 +11,14 @@
     </div>
 
     <div class="card" style="margin-top: 20px; border-color: var(--base01)">
-        <h3>Live Event Logs</h3>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3>Live Event Logs</h3>
+            <!-- Security integrity badge (Issue #11): updated by JS as signatures are verified -->
+            <span id="log-integrity-badge"
+                  style="font-size: 0.85em; padding: 3px 8px; border: 1px solid var(--base01); border-radius: 4px; color: var(--base1)">
+                ⏳ Verifying…
+            </span>
+        </div>
         <div id="log-container" 
              style="background: var(--base03); height: 300px; overflow-y: scroll; padding: 10px; font-size: 0.9em; border: 1px solid var(--base02)">
              <em>Initializing secure log stream...</em>
@@ -19,16 +26,69 @@
         
         <script>
             (function() {
-                const eventSource = new EventSource("/api/jobs/{{ job_id }}/logs");
                 const logContainer = document.getElementById("log-container");
-                
-                eventSource.onmessage = function(event) {
+                const badgeEl = document.getElementById("log-integrity-badge");
+                let cryptoKey = null;
+                let allVerified = true;
+
+                // Fetch the HMAC-SHA256 session key, then import it for verification.
+                fetch('/api/log-session-key')
+                    .then(r => r.json())
+                    .then(data => {
+                        const raw = atob(data.key);
+                        const keyBytes = new Uint8Array(raw.length);
+                        for (let i = 0; i < raw.length; i++) keyBytes[i] = raw.charCodeAt(i);
+                        return crypto.subtle.importKey(
+                            'raw', keyBytes,
+                            { name: 'HMAC', hash: 'SHA-256' },
+                            false, ['verify']
+                        );
+                    })
+                    .then(key => { cryptoKey = key; })
+                    .catch(() => {
+                        badgeEl.textContent = '⚠ Unverified';
+                        badgeEl.style.color = 'var(--orange)';
+                    });
+
+                async function verifyAndAppend(rawData) {
+                    let parsed;
+                    try { parsed = JSON.parse(rawData); } catch (_) {
+                        // Fallback for plain-text frames.
+                        const d = document.createElement("div");
+                        d.innerHTML = rawData;
+                        logContainer.appendChild(d);
+                        logContainer.scrollTop = logContainer.scrollHeight;
+                        return;
+                    }
+
+                    if (cryptoKey && parsed.sig) {
+                        const sigHex = parsed.sig;
+                        const sigBytes = new Uint8Array(sigHex.match(/.{2}/g).map(b => parseInt(b, 16)));
+                        const msgBytes = new TextEncoder().encode(parsed.html);
+                        const valid = await crypto.subtle.verify('HMAC', cryptoKey, sigBytes, msgBytes);
+                        if (!valid) {
+                            allVerified = false;
+                            badgeEl.textContent = '⚠ Unverified';
+                            badgeEl.style.color = 'var(--red)';
+                        } else if (allVerified) {
+                            badgeEl.textContent = 'Security Integrity ✓';
+                            badgeEl.style.color = 'var(--green)';
+                            badgeEl.style.borderColor = 'var(--green)';
+                        }
+                    }
+
                     const div = document.createElement("div");
-                    div.innerHTML = event.data;
+                    div.innerHTML = parsed.html || rawData;
                     logContainer.appendChild(div);
                     logContainer.scrollTop = logContainer.scrollHeight;
+                }
+
+                const eventSource = new EventSource("/api/jobs/{{ job_id }}/logs");
+
+                eventSource.onmessage = function(event) {
+                    verifyAndAppend(event.data);
                 };
-                
+
                 eventSource.onerror = function() {
                     eventSource.close();
                 };
