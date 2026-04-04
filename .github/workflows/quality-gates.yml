@@ -219,7 +219,7 @@ jobs:
           push: false
           tags: rune-ui:rune-ci-local
           cache-from: type=registry,ref=ghcr.io/lpasquali/rune-ui:buildcache
-          cache-to: type=registry,ref=ghcr.io/lpasquali/rune-ui:buildcache,mode=max
+          cache-to: ${{ github.event_name == 'push' && 'type=registry,ref=ghcr.io/lpasquali/rune-ui:buildcache,mode=max' || '' }}
       - run: |
           set -euo pipefail
           docker run -d --name rune-smoke -e RUNE_API_AUTH_DISABLED=1 -p 18080:8080 rune-ui:rune-ci-local
@@ -271,8 +271,8 @@ jobs:
           load: true
           tags: rune-ui:rune-ci-local
           cache-from: type=registry,ref=ghcr.io/lpasquali/rune-ui:buildcache
-          cache-to: type=registry,ref=ghcr.io/lpasquali/rune-ui:buildcache,mode=max
-      - name: Generate SBOMs — CycloneDX via Syft (IEC 62443 4-1 ML4 SM-9)
+          cache-to: ${{ github.event_name == 'push' && 'type=registry,ref=ghcr.io/lpasquali/rune-ui:buildcache,mode=max' || '' }}
+      - name: Generate SBOMs
         run: |
           set -euo pipefail
           mkdir -p sbom
