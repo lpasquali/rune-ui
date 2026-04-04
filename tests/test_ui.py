@@ -195,7 +195,7 @@ def test_stream_job_logs_error_path(mock_status: AsyncMock, mock_sleep: AsyncMoc
     with client.stream("GET", "/api/jobs/err-job/logs") as response:
         content = b"".join(response.iter_bytes()).decode()
 
-    assert "Log Error" in content
+    assert "Log stream interrupted" in content
 
 
 @patch("app.main.asyncio.sleep", new_callable=AsyncMock)
