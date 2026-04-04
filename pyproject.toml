@@ -5,10 +5,10 @@ description = "RUNE UI — The Face of the RUNE Ecosystem"
 dependencies = [
     "fastapi",
     "uvicorn",
-    "htmx-py",
     "jinja2",
     "httpx",
     "python-dotenv",
+    "python-multipart",
 ]
 
 [project.optional-dependencies]
