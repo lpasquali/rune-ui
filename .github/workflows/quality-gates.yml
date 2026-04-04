@@ -560,12 +560,7 @@ jobs:
     if: github.event_name == 'push' && needs.changes.outputs.docker == 'true'
     needs:
       - changes
-      - build-image
-      - smoke-cli-api
-      - security-sbom
-      - security-sast
-      - security-secrets
-      - security-licenses
+      - merge-gate
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -642,7 +637,6 @@ jobs:
       - security-sast
       - security-secrets
       - security-licenses
-      - publish-image-and-notify-charts
     runs-on: ubuntu-latest
     steps:
       - name: Verify all concept gates passed
