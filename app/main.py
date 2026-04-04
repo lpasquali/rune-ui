@@ -1,4 +1,5 @@
 import asyncio
+import html as html_mod
 import os
 from typing import Any, AsyncGenerator
 
@@ -51,7 +52,8 @@ async def stream_job_logs(request: Request, job_id: str) -> StreamingResponse:
                     break
 
             except Exception as exc:
-                yield f'data: <div><span style="color: var(--red)">Log Error: {exc}</span></div>\n\n'
+                safe_msg = html_mod.escape(str(exc))
+                yield f'data: <div><span style="color: var(--red)">Log Error: {safe_msg}</span></div>\n\n'
                 break
 
             await asyncio.sleep(1)
@@ -105,7 +107,7 @@ async def get_benchmark_estimate(
     except Exception as exc:
         return (
             f'<div class="modal" style="border-color: var(--red)">'
-            f"<h3>Estimation Error</h3><p>{exc}</p>"
+            f'<h3>Estimation Error</h3><p>{html_mod.escape(str(exc))}</p>'
             f'<button hx-get="/benchmarks" hx-target="#main">Back</button></div>'
         )
 
@@ -138,7 +140,8 @@ async def submit_benchmark_job(
         job_id = job_info.get("job_id")
         return templates.TemplateResponse(request, "job_tracker.html", {"job_id": job_id})
     except Exception as exc:
-        return f'<div class="card" style="border-color: var(--red)"><h3>Submission Failed</h3><p>{exc}</p></div>'
+        safe_exc = html_mod.escape(str(exc))
+        return f'<div class="card" style="border-color: var(--red)"><h3>Submission Failed</h3><p>{safe_exc}</p></div>'
 
 
 @app.get("/api/jobs/{job_id}/status", response_class=HTMLResponse)
@@ -154,14 +157,17 @@ async def poll_job_status(request: Request, job_id: str) -> str:
         if status in ["failed", "error", "cancelled"]:
             status_color = "var(--red)"
 
+        safe_jid = html_mod.escape(job_id)
+        safe_status = html_mod.escape(status.upper())
+        safe_msg = html_mod.escape(str(status_info.get("message", "")))
         return (
             f'<div class="card" style="border-left: 5px solid {status_color}">'
-            f"<h3>Job: {job_id}</h3>"
-            f'<p>Status: <span style="color: {status_color}">{status.upper()}</span></p>'
-            f'<p>{status_info.get("message", "")}</p></div>'
+            f"<h3>Job: {safe_jid}</h3>"
+            f'<p>Status: <span style="color: {status_color}">{safe_status}</span></p>'
+            f'<p>{safe_msg}</p></div>'
         )
     except Exception as exc:
-        return f'<p style="color: var(--red)">Error polling status: {exc}</p>'
+        return f'<p style="color: var(--red)">Error polling status: {html_mod.escape(str(exc))}</p>'
 
 
 @app.get("/config", response_class=HTMLResponse)
@@ -176,7 +182,8 @@ async def get_reports_page(request: Request) -> Any:
         reports_data = await api_client.get_reports()
         return templates.TemplateResponse(request, "reports.html", {"reports": reports_data})
     except Exception as exc:
-        return f'<div class="card" style="border-color: var(--red)"><h3>Reports Error</h3><p>{exc}</p></div>'
+        safe_exc = html_mod.escape(str(exc))
+        return f'<div class="card" style="border-color: var(--red)"><h3>Reports Error</h3><p>{safe_exc}</p></div>'
 
 
 @app.get("/reports/{job_id}", response_class=HTMLResponse)
@@ -186,4 +193,5 @@ async def view_report(request: Request, job_id: str) -> Any:
         report = await api_client.get_report_content(job_id)
         return templates.TemplateResponse(request, "report_view.html", {"report": report})
     except Exception as exc:
-        return f'<div class="card" style="border-color: var(--red)"><h3>Report Error</h3><p>{exc}</p></div>'
+        safe_exc = html_mod.escape(str(exc))
+        return f'<div class="card" style="border-color: var(--red)"><h3>Report Error</h3><p>{safe_exc}</p></div>'
