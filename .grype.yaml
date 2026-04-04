@@ -1,0 +1,2 @@
+db:
+  update-on-add-if-stale: true
