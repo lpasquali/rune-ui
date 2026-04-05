@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from app.main import app
+from rune_ui.main import app
 
 client = TestClient(app)
 
@@ -14,7 +14,7 @@ def test_index_page() -> None:
     assert "RUNE" in response.text
 
 
-@patch("app.api_client.RuneApiClient.get_health", new_callable=AsyncMock)
+@patch("rune_ui.api_client.RuneApiClient.get_health", new_callable=AsyncMock)
 def test_api_status_online(mock_health: AsyncMock) -> None:
     mock_health.return_value = {"status": "ok"}
     response = client.get("/api/status")
@@ -22,7 +22,7 @@ def test_api_status_online(mock_health: AsyncMock) -> None:
     assert "ONLINE" in response.text
 
 
-@patch("app.api_client.RuneApiClient.get_health", new_callable=AsyncMock)
+@patch("rune_ui.api_client.RuneApiClient.get_health", new_callable=AsyncMock)
 def test_api_status_degraded(mock_health: AsyncMock) -> None:
     mock_health.return_value = {"status": "degraded"}
     response = client.get("/api/status")
@@ -30,7 +30,7 @@ def test_api_status_degraded(mock_health: AsyncMock) -> None:
     assert "DEGRADED" in response.text
 
 
-@patch("app.api_client.RuneApiClient.get_health", new_callable=AsyncMock)
+@patch("rune_ui.api_client.RuneApiClient.get_health", new_callable=AsyncMock)
 def test_api_status_offline(mock_health: AsyncMock) -> None:
     mock_health.side_effect = Exception("offline")
     response = client.get("/api/status")
@@ -44,7 +44,7 @@ def test_benchmarks_page() -> None:
     assert "Run Benchmark" in response.text
 
 
-@patch("app.api_client.RuneApiClient.get_estimate", new_callable=AsyncMock)
+@patch("rune_ui.api_client.RuneApiClient.get_estimate", new_callable=AsyncMock)
 def test_cost_estimate_modal(mock_estimate: AsyncMock) -> None:
     mock_estimate.return_value = {
         "projected_cost_usd": 10.50,
@@ -59,7 +59,7 @@ def test_cost_estimate_modal(mock_estimate: AsyncMock) -> None:
     assert "$10.5" in response.text
 
 
-@patch("app.api_client.RuneApiClient.get_estimate", new_callable=AsyncMock)
+@patch("rune_ui.api_client.RuneApiClient.get_estimate", new_callable=AsyncMock)
 def test_cost_estimate_error(mock_estimate: AsyncMock) -> None:
     mock_estimate.side_effect = Exception("API unreachable")
     response = client.post("/benchmarks/estimate", data={"model": "llama3.1:8b"})
@@ -67,7 +67,7 @@ def test_cost_estimate_error(mock_estimate: AsyncMock) -> None:
     assert "Estimation Error" in response.text
 
 
-@patch("app.api_client.RuneApiClient.submit_job", new_callable=AsyncMock)
+@patch("rune_ui.api_client.RuneApiClient.submit_job", new_callable=AsyncMock)
 def test_job_submission(mock_submit: AsyncMock) -> None:
     mock_submit.return_value = {"job_id": "test-job-123"}
     response = client.post("/api/jobs/submit", data={"model": "llama3.1:8b", "vastai": "true"})
@@ -76,7 +76,7 @@ def test_job_submission(mock_submit: AsyncMock) -> None:
     assert "test-job-123" in response.text
 
 
-@patch("app.api_client.RuneApiClient.submit_job", new_callable=AsyncMock)
+@patch("rune_ui.api_client.RuneApiClient.submit_job", new_callable=AsyncMock)
 def test_job_submission_error(mock_submit: AsyncMock) -> None:
     mock_submit.side_effect = Exception("Submit failed")
     response = client.post("/api/jobs/submit", data={"model": "llama3.1:8b"})
@@ -84,7 +84,7 @@ def test_job_submission_error(mock_submit: AsyncMock) -> None:
     assert "Submission Failed" in response.text
 
 
-@patch("app.api_client.RuneApiClient.get_job_status", new_callable=AsyncMock)
+@patch("rune_ui.api_client.RuneApiClient.get_job_status", new_callable=AsyncMock)
 def test_job_polling_succeeded(mock_status: AsyncMock) -> None:
     mock_status.return_value = {"status": "succeeded", "message": "Done"}
     response = client.get("/api/jobs/test-job-123/status")
@@ -92,7 +92,7 @@ def test_job_polling_succeeded(mock_status: AsyncMock) -> None:
     assert "SUCCEEDED" in response.text
 
 
-@patch("app.api_client.RuneApiClient.get_job_status", new_callable=AsyncMock)
+@patch("rune_ui.api_client.RuneApiClient.get_job_status", new_callable=AsyncMock)
 def test_job_polling_failed(mock_status: AsyncMock) -> None:
     mock_status.return_value = {"status": "failed", "message": "Error"}
     response = client.get("/api/jobs/test-job-123/status")
@@ -100,7 +100,7 @@ def test_job_polling_failed(mock_status: AsyncMock) -> None:
     assert "FAILED" in response.text
 
 
-@patch("app.api_client.RuneApiClient.get_job_status", new_callable=AsyncMock)
+@patch("rune_ui.api_client.RuneApiClient.get_job_status", new_callable=AsyncMock)
 def test_job_polling_running(mock_status: AsyncMock) -> None:
     mock_status.return_value = {"status": "running", "message": "In progress"}
     response = client.get("/api/jobs/test-job-123/status")
@@ -108,7 +108,7 @@ def test_job_polling_running(mock_status: AsyncMock) -> None:
     assert "RUNNING" in response.text
 
 
-@patch("app.api_client.RuneApiClient.get_job_status", new_callable=AsyncMock)
+@patch("rune_ui.api_client.RuneApiClient.get_job_status", new_callable=AsyncMock)
 def test_job_polling_error(mock_status: AsyncMock) -> None:
     mock_status.side_effect = Exception("Polling error")
     response = client.get("/api/jobs/test-job-123/status")
@@ -122,7 +122,7 @@ def test_config_page() -> None:
     assert "Configuration" in response.text
 
 
-@patch("app.api_client.RuneApiClient.get_reports", new_callable=AsyncMock)
+@patch("rune_ui.api_client.RuneApiClient.get_reports", new_callable=AsyncMock)
 def test_reports_page(mock_reports: AsyncMock) -> None:
     mock_reports.return_value = {"events": [{"timestamp": "now", "job_id": "123", "name": "test"}]}
     response = client.get("/reports")
@@ -130,7 +130,7 @@ def test_reports_page(mock_reports: AsyncMock) -> None:
     assert "Historical Reports" in response.text
 
 
-@patch("app.api_client.RuneApiClient.get_reports", new_callable=AsyncMock)
+@patch("rune_ui.api_client.RuneApiClient.get_reports", new_callable=AsyncMock)
 def test_reports_page_error(mock_reports: AsyncMock) -> None:
     mock_reports.side_effect = Exception("Reports unavailable")
     response = client.get("/reports")
@@ -138,14 +138,14 @@ def test_reports_page_error(mock_reports: AsyncMock) -> None:
     assert "Reports Error" in response.text
 
 
-@patch("app.api_client.RuneApiClient.get_report_content", new_callable=AsyncMock)
+@patch("rune_ui.api_client.RuneApiClient.get_report_content", new_callable=AsyncMock)
 def test_view_report(mock_report: AsyncMock) -> None:
     mock_report.return_value = {"job_id": "abc-123", "status": "succeeded", "result": "All good"}
     response = client.get("/reports/abc-123")
     assert response.status_code == 200
 
 
-@patch("app.api_client.RuneApiClient.get_report_content", new_callable=AsyncMock)
+@patch("rune_ui.api_client.RuneApiClient.get_report_content", new_callable=AsyncMock)
 def test_view_report_error(mock_report: AsyncMock) -> None:
     mock_report.side_effect = Exception("Report not found")
     response = client.get("/reports/missing-job")
@@ -155,8 +155,8 @@ def test_view_report_error(mock_report: AsyncMock) -> None:
 
 # ── Streaming SSE endpoint ────────────────────────────────────────────────────
 
-@patch("app.main.asyncio.sleep", new_callable=AsyncMock)
-@patch("app.api_client.RuneApiClient.get_job_status", new_callable=AsyncMock)
+@patch("rune_ui.main.asyncio.sleep", new_callable=AsyncMock)
+@patch("rune_ui.api_client.RuneApiClient.get_job_status", new_callable=AsyncMock)
 def test_stream_job_logs_events_and_done(mock_status: AsyncMock, mock_sleep: AsyncMock) -> None:
     """Stream completes when job reaches succeeded status."""
     events_resp = {"events": [{"timestamp": "2026-01-01T00:00:00Z", "name": "step", "message": "ok"}]}
@@ -170,8 +170,8 @@ def test_stream_job_logs_events_and_done(mock_status: AsyncMock, mock_sleep: Asy
     assert "STREAM ENDED" in content
 
 
-@patch("app.main.asyncio.sleep", new_callable=AsyncMock)
-@patch("app.api_client.RuneApiClient.get_job_status", new_callable=AsyncMock)
+@patch("rune_ui.main.asyncio.sleep", new_callable=AsyncMock)
+@patch("rune_ui.api_client.RuneApiClient.get_job_status", new_callable=AsyncMock)
 def test_stream_job_logs_no_events_then_done(mock_status: AsyncMock, mock_sleep: AsyncMock) -> None:
     """Stream completes when status is succeeded even with no events."""
     empty_events = {"events": []}
@@ -185,8 +185,8 @@ def test_stream_job_logs_no_events_then_done(mock_status: AsyncMock, mock_sleep:
     assert "STREAM ENDED" in content
 
 
-@patch("app.main.asyncio.sleep", new_callable=AsyncMock)
-@patch("app.api_client.RuneApiClient.get_job_status", new_callable=AsyncMock)
+@patch("rune_ui.main.asyncio.sleep", new_callable=AsyncMock)
+@patch("rune_ui.api_client.RuneApiClient.get_job_status", new_callable=AsyncMock)
 def test_stream_job_logs_error_path(mock_status: AsyncMock, mock_sleep: AsyncMock) -> None:
     """Stream yields error message when API call raises an exception."""
     mock_status.side_effect = Exception("connection lost")
@@ -198,8 +198,8 @@ def test_stream_job_logs_error_path(mock_status: AsyncMock, mock_sleep: AsyncMoc
     assert "Log stream interrupted" in content
 
 
-@patch("app.main.asyncio.sleep", new_callable=AsyncMock)
-@patch("app.api_client.RuneApiClient.get_job_status", new_callable=AsyncMock)
+@patch("rune_ui.main.asyncio.sleep", new_callable=AsyncMock)
+@patch("rune_ui.api_client.RuneApiClient.get_job_status", new_callable=AsyncMock)
 def test_stream_job_logs_cancelled(mock_status: AsyncMock, mock_sleep: AsyncMock) -> None:
     """Stream stops on cancelled status."""
     mock_status.side_effect = [{"events": []}, {"status": "cancelled"}]
@@ -216,7 +216,7 @@ def test_stream_job_logs_cancelled(mock_status: AsyncMock, mock_sleep: AsyncMock
 
 def test_api_client_init_with_explicit_token() -> None:
     """RuneApiClient stores explicit token in Authorization header."""
-    from app.api_client import RuneApiClient
+    from rune_ui.api_client import RuneApiClient
 
     c = RuneApiClient(base_url="http://example.com", api_token="explicit-token")
     assert c.headers.get("Authorization") == "Bearer explicit-token"
@@ -227,7 +227,7 @@ def test_api_client_init_no_token() -> None:
     """RuneApiClient has no Authorization header when no token provided."""
     import os
 
-    from app.api_client import RuneApiClient
+    from rune_ui.api_client import RuneApiClient
 
     # Ensure no env token is set during this test
     old = os.environ.pop("RUNE_API_TOKEN", None)
@@ -241,14 +241,14 @@ def test_api_client_init_no_token() -> None:
 
 def test_api_client_strips_trailing_slash() -> None:
     """RuneApiClient strips trailing slash from base_url."""
-    from app.api_client import RuneApiClient
+    from rune_ui.api_client import RuneApiClient
 
     c = RuneApiClient(base_url="http://example.com/")
     assert c.base_url == "http://example.com"
 
 
-@patch("app.main.asyncio.sleep", new_callable=AsyncMock)
-@patch("app.api_client.RuneApiClient.get_job_status", new_callable=AsyncMock)
+@patch("rune_ui.main.asyncio.sleep", new_callable=AsyncMock)
+@patch("rune_ui.api_client.RuneApiClient.get_job_status", new_callable=AsyncMock)
 def test_stream_job_logs_multi_iteration(mock_status: AsyncMock, mock_sleep: AsyncMock) -> None:
     """Stream loops more than once, exercising asyncio.sleep."""
     # Iteration 1: events=[], status=running → continues (hits asyncio.sleep)
@@ -275,7 +275,7 @@ def test_api_client_get_vastai_models() -> None:
     import asyncio
     from unittest.mock import MagicMock, patch
 
-    from app.api_client import RuneApiClient
+    from rune_ui.api_client import RuneApiClient
 
     async def _run() -> None:
         mock_response = MagicMock()
@@ -286,7 +286,7 @@ def test_api_client_get_vastai_models() -> None:
         mock_async_client.__aexit__.return_value = None
         mock_async_client.get.return_value = mock_response
 
-        with patch("app.api_client.httpx.AsyncClient", return_value=mock_async_client):
+        with patch("rune_ui.api_client.httpx.AsyncClient", return_value=mock_async_client):
             c = RuneApiClient(base_url="http://localhost:8080", api_token="tok")
             result = await c.get_vastai_models()
         assert "models" in result
@@ -312,11 +312,11 @@ def _make_httpx_mock(json_data: dict) -> "tuple[Any, Any]":
 def test_api_client_get_health_impl() -> None:
     import asyncio
 
-    from app.api_client import RuneApiClient
+    from rune_ui.api_client import RuneApiClient
 
     async def _run() -> None:
         ac, _ = _make_httpx_mock({"status": "ok"})
-        with patch("app.api_client.httpx.AsyncClient", return_value=ac):
+        with patch("rune_ui.api_client.httpx.AsyncClient", return_value=ac):
             c = RuneApiClient(base_url="http://x")
             result = await c.get_health()
         assert result["status"] == "ok"
@@ -327,11 +327,11 @@ def test_api_client_get_health_impl() -> None:
 def test_api_client_get_estimate_impl() -> None:
     import asyncio
 
-    from app.api_client import RuneApiClient
+    from rune_ui.api_client import RuneApiClient
 
     async def _run() -> None:
         ac, _ = _make_httpx_mock({"projected_cost_usd": 5.0})
-        with patch("app.api_client.httpx.AsyncClient", return_value=ac):
+        with patch("rune_ui.api_client.httpx.AsyncClient", return_value=ac):
             c = RuneApiClient(base_url="http://x")
             result = await c.get_estimate({"model": "test"})
         assert "projected_cost_usd" in result
@@ -342,11 +342,11 @@ def test_api_client_get_estimate_impl() -> None:
 def test_api_client_submit_job_impl() -> None:
     import asyncio
 
-    from app.api_client import RuneApiClient
+    from rune_ui.api_client import RuneApiClient
 
     async def _run() -> None:
         ac, _ = _make_httpx_mock({"job_id": "abc"})
-        with patch("app.api_client.httpx.AsyncClient", return_value=ac):
+        with patch("rune_ui.api_client.httpx.AsyncClient", return_value=ac):
             c = RuneApiClient(base_url="http://x")
             result = await c.submit_job("benchmark", {"vastai": True})
         assert result["job_id"] == "abc"
@@ -357,11 +357,11 @@ def test_api_client_submit_job_impl() -> None:
 def test_api_client_get_job_status_impl() -> None:
     import asyncio
 
-    from app.api_client import RuneApiClient
+    from rune_ui.api_client import RuneApiClient
 
     async def _run() -> None:
         ac, _ = _make_httpx_mock({"status": "succeeded"})
-        with patch("app.api_client.httpx.AsyncClient", return_value=ac):
+        with patch("rune_ui.api_client.httpx.AsyncClient", return_value=ac):
             c = RuneApiClient(base_url="http://x")
             result = await c.get_job_status("job-1")
         assert result["status"] == "succeeded"
@@ -372,11 +372,11 @@ def test_api_client_get_job_status_impl() -> None:
 def test_api_client_get_reports_impl() -> None:
     import asyncio
 
-    from app.api_client import RuneApiClient
+    from rune_ui.api_client import RuneApiClient
 
     async def _run() -> None:
         ac, _ = _make_httpx_mock({"events": []})
-        with patch("app.api_client.httpx.AsyncClient", return_value=ac):
+        with patch("rune_ui.api_client.httpx.AsyncClient", return_value=ac):
             c = RuneApiClient(base_url="http://x")
             result = await c.get_reports()
         assert "events" in result
@@ -387,11 +387,11 @@ def test_api_client_get_reports_impl() -> None:
 def test_api_client_get_report_content_impl() -> None:
     import asyncio
 
-    from app.api_client import RuneApiClient
+    from rune_ui.api_client import RuneApiClient
 
     async def _run() -> None:
         ac, _ = _make_httpx_mock({"job_id": "r1", "result": "ok"})
-        with patch("app.api_client.httpx.AsyncClient", return_value=ac):
+        with patch("rune_ui.api_client.httpx.AsyncClient", return_value=ac):
             c = RuneApiClient(base_url="http://x")
             result = await c.get_report_content("r1")
         assert result["job_id"] == "r1"
@@ -401,7 +401,7 @@ def test_api_client_get_report_content_impl() -> None:
 
 # ── Issue #10: pre-flight modal carries form params into submit ───────────────
 
-@patch("app.api_client.RuneApiClient.get_estimate", new_callable=AsyncMock)
+@patch("rune_ui.api_client.RuneApiClient.get_estimate", new_callable=AsyncMock)
 def test_estimate_modal_contains_hidden_model_field(mock_estimate: AsyncMock) -> None:
     """estimate_modal.html must include a hidden 'model' field so CONFIRM can submit it."""
     mock_estimate.return_value = {
@@ -420,7 +420,7 @@ def test_estimate_modal_contains_hidden_model_field(mock_estimate: AsyncMock) ->
     assert 'value="mixtral:8x7b"' in response.text
 
 
-@patch("app.api_client.RuneApiClient.get_estimate", new_callable=AsyncMock)
+@patch("rune_ui.api_client.RuneApiClient.get_estimate", new_callable=AsyncMock)
 def test_estimate_modal_contains_hidden_vastai_field(mock_estimate: AsyncMock) -> None:
     """estimate_modal.html must carry vastai hidden field for job submission."""
     mock_estimate.return_value = {
@@ -465,7 +465,7 @@ def test_sign_log_event_produces_valid_hmac() -> None:
     import hashlib
     import hmac as _hmac
 
-    from app.main import _log_session_key, _sign_log_event
+    from rune_ui.main import _log_session_key, _sign_log_event
 
     payload = "<div>test</div>"
     sig = _sign_log_event(payload)
@@ -474,8 +474,8 @@ def test_sign_log_event_produces_valid_hmac() -> None:
     assert sig == expected
 
 
-@patch("app.main.asyncio.sleep", new_callable=AsyncMock)
-@patch("app.api_client.RuneApiClient.get_job_status", new_callable=AsyncMock)
+@patch("rune_ui.main.asyncio.sleep", new_callable=AsyncMock)
+@patch("rune_ui.api_client.RuneApiClient.get_job_status", new_callable=AsyncMock)
 def test_stream_job_logs_events_carry_sig_field(mock_status: AsyncMock, mock_sleep: AsyncMock) -> None:
     """SSE events must now be JSON objects containing 'html' and 'sig' fields (Issue #11)."""
     import json as _json
@@ -498,15 +498,15 @@ def test_stream_job_logs_events_carry_sig_field(mock_status: AsyncMock, mock_sle
         assert len(parsed["sig"]) == 64  # SHA-256 hex
 
 
-@patch("app.main.asyncio.sleep", new_callable=AsyncMock)
-@patch("app.api_client.RuneApiClient.get_job_status", new_callable=AsyncMock)
+@patch("rune_ui.main.asyncio.sleep", new_callable=AsyncMock)
+@patch("rune_ui.api_client.RuneApiClient.get_job_status", new_callable=AsyncMock)
 def test_stream_job_logs_sig_verifies_correctly(mock_status: AsyncMock, mock_sleep: AsyncMock) -> None:
     """HMAC signatures on SSE events must verify against the session key."""
     import hashlib
     import hmac as _hmac
     import json as _json
 
-    from app.main import _log_session_key
+    from rune_ui.main import _log_session_key
 
     events_resp = {"events": [{"timestamp": "t", "name": "n", "message": "m"}]}
     status_resp = {"status": "succeeded"}
@@ -523,15 +523,15 @@ def test_stream_job_logs_sig_verifies_correctly(mock_status: AsyncMock, mock_sle
         assert parsed["sig"] == expected_sig, f"Signature mismatch for chunk: {parsed['html']!r}"
 
 
-@patch("app.main.asyncio.sleep", new_callable=AsyncMock)
-@patch("app.api_client.RuneApiClient.get_job_status", new_callable=AsyncMock)
+@patch("rune_ui.main.asyncio.sleep", new_callable=AsyncMock)
+@patch("rune_ui.api_client.RuneApiClient.get_job_status", new_callable=AsyncMock)
 def test_stream_error_event_carries_sig(mock_status: AsyncMock, mock_sleep: AsyncMock) -> None:
     """Error SSE events must also carry a valid HMAC signature."""
     import hashlib
     import hmac as _hmac
     import json as _json
 
-    from app.main import _log_session_key
+    from rune_ui.main import _log_session_key
 
     mock_status.side_effect = Exception("connection lost")
     mock_sleep.return_value = None
@@ -551,11 +551,10 @@ def test_job_tracker_shows_integrity_badge() -> None:
     """job_tracker.html must contain the security integrity badge element (Issue #11)."""
     from unittest.mock import AsyncMock, patch
 
-    with patch("app.api_client.RuneApiClient.submit_job", new_callable=AsyncMock) as mock_submit:
+    with patch("rune_ui.api_client.RuneApiClient.submit_job", new_callable=AsyncMock) as mock_submit:
         mock_submit.return_value = {"job_id": "badge-test-job"}
         response = client.post("/api/jobs/submit", data={"model": "llama3.1:8b"})
 
     assert response.status_code == 200
     assert "log-integrity-badge" in response.text
     assert "Security Integrity" in response.text or "Verifying" in response.text
-
