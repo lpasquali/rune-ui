@@ -672,4 +672,3 @@ jobs:
               sys.exit(1)
           print(f'Merge Gate OK — {len(passed)} passed, {len(skipped)} skipped (skipped jobs treated as acceptable).')
           PY
- PY
