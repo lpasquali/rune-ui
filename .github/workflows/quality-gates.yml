@@ -652,20 +652,20 @@ jobs:
       - security-licenses
     runs-on: ubuntu-latest
     steps:
-      - name: Verify all concept gates passed
+      - name: Verify all gates passed or were skipped
         env:
           NEEDS_JSON: ${{ toJson(needs) }}
         run: |
           python3 - <<'PY'
-          import json, os
+          import json, os, sys
           data = json.loads(os.environ['NEEDS_JSON'])
           failed = [(k, v.get('result')) for k, v in data.items() if v.get('result') not in ('success', 'skipped')]
           for k, v in data.items():
               print(f'{k}: {v.get("result")}')
           if failed:
               print('Merge blocked due to failing RuneGate checks:')
-              for item in failed:
-                  print(f'- {item[0]}: {item[1]}')
-              raise SystemExit(1)
+              for name, result in failed:
+                  print(f'  - {name}: {result}')
+              sys.exit(1)
           print('All RuneGate checks passed.')
           PY
