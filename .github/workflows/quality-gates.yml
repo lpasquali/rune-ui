@@ -659,13 +659,16 @@ jobs:
           python3 - <<'PY'
           import json, os, sys
           data = json.loads(os.environ['NEEDS_JSON'])
-          failed = [(k, v.get('result')) for k, v in data.items() if v.get('result') not in ('success', 'skipped')]
-          for k, v in data.items():
-              print(f'{k}: {v.get("result")}')
+          results = {k: v.get('result') for k, v in data.items()}
+          failed = [(k, r) for k, r in results.items() if r not in ('success', 'skipped')]
+          passed = [k for k, r in results.items() if r == 'success']
+          skipped = [k for k, r in results.items() if r == 'skipped']
+          for k, r in sorted(results.items()):
+              print(f'{k}: {r}')
           if failed:
               print('Merge blocked due to failing RuneGate checks:')
               for name, result in failed:
                   print(f'  - {name}: {result}')
               sys.exit(1)
-          print('All RuneGate checks passed.')
+          print(f'Merge Gate OK — {len(passed)} passed, {len(skipped)} skipped (skipped jobs treated as acceptable).')
           PY
