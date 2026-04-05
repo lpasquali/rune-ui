@@ -2,5 +2,5 @@ apiVersion: v2
 name: rune-ui
 description: Helm chart for the RUNE UI — the web front-end for the RUNE benchmarking platform.
 type: application
-version: 0.1.0
-appVersion: "0.1.0"
+version: 0.0.0-a0
+appVersion: "0.0.0-a0"
