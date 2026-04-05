@@ -11,7 +11,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # 3. Application code
 COPY rune_ui/ rune_ui/
-COPY static/ static/
 
 # 4. Security: Hardening
 RUN chown -R rune:rune /app
