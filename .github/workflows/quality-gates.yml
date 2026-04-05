@@ -46,7 +46,7 @@ jobs:
           fi
           printf '%s\n' "$CHANGED"
           # python: source code, tests, dependencies, build config
-          if printf '%s\n' "$CHANGED" | grep -qE '^(app/|tests/|requirements\.txt|pyproject\.toml)'; then
+          if printf '%s\n' "$CHANGED" | grep -qE '^(rune_ui/|tests/|requirements\.txt|pyproject\.toml)'; then
             echo "python=true" >> "$GITHUB_OUTPUT"
           else
             echo "python=false" >> "$GITHUB_OUTPUT"
@@ -672,3 +672,4 @@ jobs:
               sys.exit(1)
           print(f'Merge Gate OK — {len(passed)} passed, {len(skipped)} skipped (skipped jobs treated as acceptable).')
           PY
+ PY

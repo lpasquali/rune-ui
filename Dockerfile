@@ -19,4 +19,5 @@ USER 1000
 
 # 5. Runtime
 EXPOSE 8080
-ENTRYPOINT ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
+ENTRYPOINT ["python", "-m", "uvicorn", "rune_ui.main:app", "--host", "0.0.0.0", "--port", "8080"]
+0"]

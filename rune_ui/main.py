@@ -14,14 +14,14 @@ from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from app.api_client import RuneApiClient
+from rune_ui.api_client import RuneApiClient
 
 log = logging.getLogger(__name__)
 
 app = FastAPI(title="RUNE UI")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-templates = Jinja2Templates(directory="app/templates")
+templates = Jinja2Templates(directory="rune_ui/templates")
 
 RUNE_API_URL = os.environ.get("RUNE_API_URL", "http://localhost:8080")
 api_client = RuneApiClient(base_url=RUNE_API_URL)

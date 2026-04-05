@@ -1,0 +1,87 @@
+# Publish rune-ui to PyPI on version tags.
+#
+# Trigger: push of a tag matching v* (e.g. v0.2.0, v1.0.0-rc1)
+#
+# ─── TAGGING PROCESS ────────────────────────────────────────────────────────
+#  Tags MUST only be pushed AFTER the PR has been merged to main and all
+#  quality gates (RuneGate Grouped) have passed.
+#
+#  Correct flow:
+#    1. Open PR → quality gates pass → merge to main
+#    2. git pull origin main
+#    3. git tag v<version>   (version must match pyproject.toml exactly)
+#    4. git push origin v<version>
+#
+#  NEVER push a tag on an unmerged branch or before quality gates pass.
+#  The guard step below will reject tags not reachable from origin/main.
+# ────────────────────────────────────────────────────────────────────────────
+
+name: Publish to PyPI
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Build and publish to PyPI
+    # Extra safety: ensure this only ever runs on a real tag push, not on a branch.
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/rune-ui/
+
+    permissions:
+      id-token: write   # Required for OIDC token exchange with PyPI
+      contents: write   # Required to create GitHub Releases
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Verify tag is on main and version matches pyproject.toml
+        run: |
+          git fetch origin main
+          COMMIT_SHA=$(git rev-parse "${GITHUB_SHA}^{commit}" 2>/dev/null || echo "$GITHUB_SHA")
+          if ! git merge-base --is-ancestor "$COMMIT_SHA" origin/main; then
+            echo "ERROR: Tagged commit is not reachable from origin/main." >&2
+            echo "Tags must only be pushed AFTER merging to main." >&2
+            exit 1
+          fi
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          PKG_VERSION=$(python - <<'EOF'
+          import tomllib, pathlib
+          with open("pyproject.toml", "rb") as f:
+              print(tomllib.load(f)["project"]["version"])
+          EOF
+          )
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "ERROR: Tag version ($TAG_VERSION) does not match pyproject.toml version ($PKG_VERSION)." >&2
+            exit 1
+          fi
+          echo "Version check passed: $PKG_VERSION"
+
+      - name: Install build tools
+        run: pip install --upgrade pip build twine
+
+      - name: Build sdist and wheel
+        run: python -m build
+
+      - name: Verify dist contents
+        run: twine check dist/*
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
