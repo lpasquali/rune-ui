@@ -46,7 +46,7 @@ jobs:
           fi
           printf '%s\n' "$CHANGED"
           # python: source code, tests, dependencies, build config
-          if printf '%s\n' "$CHANGED" | grep -qE '^(app/|tests/|requirements\.txt|pyproject\.toml)'; then
+          if printf '%s\n' "$CHANGED" | grep -qE '^(rune_ui/|tests/|requirements\.txt|pyproject\.toml)'; then
             echo "python=true" >> "$GITHUB_OUTPUT"
           else
             echo "python=false" >> "$GITHUB_OUTPUT"
@@ -168,8 +168,8 @@ jobs:
           pip install --upgrade pip
           pip install --prefer-binary -r requirements.txt ruff mypy
       - run: |
-          .venv/bin/ruff check app
-          .venv/bin/mypy app
+          .venv/bin/ruff check rune_ui
+          .venv/bin/mypy rune_ui
 
   # ─── Docker / container gates ────────────────────────────────────────────────
   # Decoupled from the Python test chain so a Dockerfile-only change still
@@ -402,7 +402,7 @@ jobs:
           rc=0
 
           pip install bandit
-          bandit -r app -ll -f json -o bandit-results.json || rc=1
+          bandit -r rune_ui -ll -f json -o bandit-results.json || rc=1
 
           python3 - <<'PY'
           import json

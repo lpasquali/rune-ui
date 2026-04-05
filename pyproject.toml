@@ -1,7 +1,12 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "rune-ui"
 version = "0.1.0"
 description = "RUNE UI — The Face of the RUNE Ecosystem"
+requires-python = ">=3.12"
 dependencies = [
     "fastapi",
     "uvicorn",
@@ -20,8 +25,17 @@ dev = [
     "bandit",
 ]
 
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-data]
+rune_ui = ["templates/**/*.html", "static/**/*"]
+
+[tool.setuptools.packages.find]
+include = ["rune_ui*"]
+
 [tool.pytest.ini_options]
-addopts = "--cov=app --cov-report=term-missing --cov-fail-under=97"
+addopts = "--cov=rune_ui --cov-report=term-missing --cov-fail-under=97"
 testpaths = ["tests"]
 
 [tool.ruff]

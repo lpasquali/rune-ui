@@ -10,8 +10,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # 3. Application code
-COPY app/ app/
-COPY static/ static/
+COPY rune_ui/ rune_ui/
 
 # 4. Security: Hardening
 RUN chown -R rune:rune /app
@@ -19,4 +18,4 @@ USER 1000
 
 # 5. Runtime
 EXPOSE 8080
-ENTRYPOINT ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
+ENTRYPOINT ["python", "-m", "uvicorn", "rune_ui.main:app", "--host", "0.0.0.0", "--port", "8080"]
