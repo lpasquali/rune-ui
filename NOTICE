@@ -1,0 +1,32 @@
+RUNE UI
+Copyright 2025-2026 The Rune Authors
+
+This product is licensed under the Apache License, Version 2.0.
+
+This product includes software developed by third parties.
+
+---
+
+FastAPI (https://github.com/tiangolo/fastapi)
+  License: MIT
+  Copyright (c) Sebastián Ramírez
+
+Uvicorn (https://github.com/encode/uvicorn)
+  License: BSD-3-Clause
+  Copyright (c) Encode OSS Ltd.
+
+Jinja2 (https://github.com/pallets/jinja)
+  License: BSD-3-Clause
+  Copyright (c) Armin Ronacher / Pallets
+
+HTTPX (https://github.com/encode/httpx)
+  License: BSD-3-Clause
+  Copyright (c) Encode OSS Ltd.
+
+python-dotenv (https://github.com/theskumar/python-dotenv)
+  License: BSD-3-Clause
+  Copyright (c) Saurabh Kumar
+
+python-multipart (https://github.com/andrew-d/python-multipart)
+  License: Apache-2.0
+  Copyright (c) Andrew Dunham
