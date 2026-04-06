@@ -90,6 +90,12 @@ async def stream_job_logs(request: Request, job_id: str) -> StreamingResponse:
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
+@app.get("/healthz")
+async def healthz() -> JSONResponse:
+    """Liveness probe for Docker/K8s health checks."""
+    return JSONResponse({"status": "ok"})
+
+
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request) -> Any:
     return templates.TemplateResponse(request, "base.html")
@@ -101,9 +107,9 @@ async def get_status(request: Request) -> str:
         health = await api_client.get_health()
         if health.get("status") == "ok":
             return '<span style="color: var(--green)">API STATUS: ONLINE</span>'
-        return '<span style="color: var(--red)">API STATUS: DEGRADED</span>'
+        return '<span style="color: var(--yellow)">API STATUS: NOT CONNECTED</span>'
     except Exception:
-        return '<span style="color: var(--red)">API STATUS: OFFLINE</span>'
+        return '<span style="color: var(--yellow)">API STATUS: NOT CONNECTED</span>'
 
 
 @app.get("/benchmarks", response_class=HTMLResponse)

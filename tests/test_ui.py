@@ -8,6 +8,12 @@ from rune_ui.main import app
 client = TestClient(app)
 
 
+def test_healthz_returns_ok() -> None:
+    response = client.get("/healthz")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
 def test_index_page() -> None:
     response = client.get("/")
     assert response.status_code == 200
@@ -23,19 +29,19 @@ def test_api_status_online(mock_health: AsyncMock) -> None:
 
 
 @patch("rune_ui.api_client.RuneApiClient.get_health", new_callable=AsyncMock)
-def test_api_status_degraded(mock_health: AsyncMock) -> None:
+def test_api_status_not_connected_bad_status(mock_health: AsyncMock) -> None:
     mock_health.return_value = {"status": "degraded"}
     response = client.get("/api/status")
     assert response.status_code == 200
-    assert "DEGRADED" in response.text
+    assert "NOT CONNECTED" in response.text
 
 
 @patch("rune_ui.api_client.RuneApiClient.get_health", new_callable=AsyncMock)
-def test_api_status_offline(mock_health: AsyncMock) -> None:
+def test_api_status_not_connected_exception(mock_health: AsyncMock) -> None:
     mock_health.side_effect = Exception("offline")
     response = client.get("/api/status")
     assert response.status_code == 200
-    assert "OFFLINE" in response.text
+    assert "NOT CONNECTED" in response.text
 
 
 def test_benchmarks_page() -> None:

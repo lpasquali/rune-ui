@@ -3,16 +3,16 @@
     <h2 style="color: var(--orange)">PRE-FLIGHT SPEND ALERT</h2>
     
     <div class="card" style="margin-bottom: 20px; border-color: var(--yellow)">
-        <p><strong>Projected Cost:</strong> <span style="font-size: 1.5em; color: var(--green)">${{ estimate.projected_cost_usd }}</span></p>
-        <p><strong>Cost Driver:</strong> {{ estimate.cost_driver.upper() }}</p>
-        <p><strong>Resource Impact:</strong> {{ estimate.resource_impact.upper() }}</p>
-        
-        {% if estimate.local_energy_kwh > 0 %}
-        <p><strong>Energy consumption:</strong> {{ estimate.local_energy_kwh }} kWh</p>
+        <p><strong>Projected Cost:</strong> <span style="font-size: 1.5em; color: var(--green)">${{ estimate['projected_cost_usd'] }}</span></p>
+        <p><strong>Cost Driver:</strong> {{ estimate['cost_driver']|upper }}</p>
+        <p><strong>Resource Impact:</strong> {{ estimate['resource_impact']|upper }}</p>
+
+        {% if estimate.get('local_energy_kwh', 0) > 0 %}
+        <p><strong>Energy consumption:</strong> {{ estimate['local_energy_kwh'] }} kWh</p>
         {% endif %}
-        
-        {% if estimate.warning %}
-        <p style="color: var(--orange)"><strong>Warning:</strong> {{ estimate.warning }}</p>
+
+        {% if estimate.get('warning') %}
+        <p style="color: var(--orange)"><strong>Warning:</strong> {{ estimate['warning'] }}</p>
         {% endif %}
     </div>
 
