@@ -1,5 +1,5 @@
 # RUNE UI Dockerfile (Zero NPM)
-FROM python:3.13-slim-bookworm
+FROM python:3.13.11-slim-bookworm
 
 # 1. Security: Create non-root user
 RUN groupadd -r rune && useradd -r -g rune -u 1000 rune
@@ -7,7 +7,8 @@ RUN groupadd -r rune && useradd -r -g rune -u 1000 rune
 # 2. Dependencies
 WORKDIR /app
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 # 3. Application code
 COPY rune_ui/ rune_ui/
