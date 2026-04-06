@@ -7,3 +7,7 @@ htmlcov/
 *.egg-info/
 dist/
 .venv/
+
+# OS
+.DS_Store
+Thumbs.db
