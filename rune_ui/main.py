@@ -148,17 +148,16 @@ async def get_benchmark_estimate(
         )
     except Exception as exc:
         log.exception("Estimation failed")
-        detail = str(exc) if str(exc) else "Unknown error"
-        safe_detail = html.escape(detail)
-        safe_url = html.escape(RUNE_API_URL)
-        return (
-            '<div class="modal" style="border-color: var(--red)">'
-            "<h3>Estimation Error</h3>"
-            f"<p>Unable to compute estimate from <code>{safe_url}/v1/estimates</code>.</p>"
-            f'<p style="color: var(--base01)">Detail: {safe_detail}</p>'
-            "<p>Check that the RUNE API is running and reachable, and that "
-            "<code>RUNE_API_URL</code> or <code>RUNE_API_BASE_URL</code> is set correctly.</p>"
-            '<button hx-get="/benchmarks" hx-target="#main">Back</button></div>'
+        return templates.TemplateResponse(
+            request,
+            "error_modal.html",
+            {
+                "title": "Estimation Error",
+                "message": f"Unable to compute estimate from {RUNE_API_URL}/v1/estimates.",
+                "detail": str(exc) or "Unknown error",
+                "help": "Check that the RUNE API is running and reachable, "
+                "and that RUNE_API_URL or RUNE_API_BASE_URL is set correctly.",
+            },
         )
 
 
