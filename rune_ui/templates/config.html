@@ -1,0 +1,65 @@
+<div class="card">
+    <h2>Configuration</h2>
+    <p>Read-only view of the current RUNE environment settings.</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Setting</th>
+                <th>Value</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>API URL</td>
+                <td><code>{{ api_url }}</code></td>
+            </tr>
+            <tr>
+                <td>API Status</td>
+                <td>
+                    {% if api_online %}
+                    <span style="color: var(--green)">ONLINE</span>
+                    {% else %}
+                    <span style="color: var(--yellow)">NOT CONNECTED</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>Authentication</td>
+                <td>
+                    {% if auth_disabled %}
+                    <span style="color: var(--yellow)">DISABLED</span>
+                    {% else %}
+                    <span style="color: var(--green)">ENABLED</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>Tenant</td>
+                <td><code>{{ tenant }}</code></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="card" style="margin-top: 20px;">
+    <h3>Available Models</h3>
+    {% if models %}
+    <table>
+        <thead>
+            <tr>
+                <th>Model</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for model in models %}
+            <tr>
+                <td><code>{{ model }}</code></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color: var(--base01)"><em>No models available. The API may be offline or the catalog is empty.</em></p>
+    {% endif %}
+</div>

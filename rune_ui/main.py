@@ -25,7 +25,10 @@ app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
-RUNE_API_URL = os.environ.get("RUNE_API_URL", "http://localhost:8080")
+RUNE_API_URL = os.environ.get(
+    "RUNE_API_URL",
+    os.environ.get("RUNE_API_BASE_URL", "http://localhost:8080"),
+)
 api_client = RuneApiClient(base_url=RUNE_API_URL)
 
 # Per-process HMAC key used to sign SSE log chunks (Issue #11).
@@ -143,11 +146,18 @@ async def get_benchmark_estimate(
             "estimate_modal.html",
             {"estimate": estimate, "model": model, "vastai": vastai, "max_dph": max_dph},
         )
-    except Exception:
+    except Exception as exc:
         log.exception("Estimation failed")
+        detail = str(exc) if str(exc) else "Unknown error"
+        safe_detail = html.escape(detail)
+        safe_url = html.escape(RUNE_API_URL)
         return (
             '<div class="modal" style="border-color: var(--red)">'
-            "<h3>Estimation Error</h3><p>Unable to compute estimate. Please try again.</p>"
+            "<h3>Estimation Error</h3>"
+            f"<p>Unable to compute estimate from <code>{safe_url}/v1/estimates</code>.</p>"
+            f'<p style="color: var(--base01)">Detail: {safe_detail}</p>'
+            "<p>Check that the RUNE API is running and reachable, and that "
+            "<code>RUNE_API_URL</code> or <code>RUNE_API_BASE_URL</code> is set correctly.</p>"
             '<button hx-get="/benchmarks" hx-target="#main">Back</button></div>'
         )
 
@@ -211,9 +221,46 @@ async def poll_job_status(request: Request, job_id: str) -> str:
         return '<p style="color: var(--red)">Error polling status. Please retry.</p>'
 
 
+@app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard(request: Request) -> Any:
+    """Redirect /dashboard to the index (the index serves as the dashboard)."""
+    return templates.TemplateResponse(request, "base.html")
+
+
 @app.get("/config", response_class=HTMLResponse)
-async def get_config(request: Request) -> str:
-    return '<div class="card"><h2>Configuration</h2><p>Manage Vast.ai templates and Ollama endpoints.</p></div>'
+async def get_config(request: Request) -> Any:
+    """Configuration page: read-only display of backend settings, API status, and models."""
+    api_url = RUNE_API_URL
+    auth_disabled = os.environ.get("RUNE_API_AUTH_DISABLED", "0") == "1"
+    tenant = os.environ.get("RUNE_API_TENANT", "default")
+
+    # Check API connectivity
+    api_online = False
+    try:
+        health = await api_client.get_health()
+        api_online = health.get("status") == "ok"
+    except Exception:
+        pass
+
+    # Fetch available models (best-effort)
+    models: list[str] = []
+    try:
+        catalog = await api_client.get_vastai_models()
+        models = catalog.get("models", [])
+    except Exception:
+        pass
+
+    return templates.TemplateResponse(
+        request,
+        "config.html",
+        {
+            "api_url": api_url,
+            "api_online": api_online,
+            "auth_disabled": auth_disabled,
+            "tenant": tenant,
+            "models": models,
+        },
+    )
 
 
 @app.get("/reports", response_class=HTMLResponse)
