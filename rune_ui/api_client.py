@@ -19,6 +19,7 @@ class RuneApiClient:
     async def get_health(self) -> Dict[str, Any]:
         async with httpx.AsyncClient() as client:
             response = await client.get(f"{self.base_url}/healthz")
+            response.raise_for_status()
             return dict(response.json())
 
     async def get_vastai_models(self) -> Dict[str, Any]:
@@ -37,6 +38,7 @@ class RuneApiClient:
                 headers=self.headers,
                 json=payload,
             )
+            response.raise_for_status()
             return dict(response.json())
 
     async def submit_job(self, kind: str, payload: Dict[str, Any]) -> Dict[str, Any]:
