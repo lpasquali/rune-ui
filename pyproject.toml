@@ -16,6 +16,12 @@ dependencies = [
     "python-multipart",
 ]
 
+[project.urls]
+Homepage = "https://github.com/lpasquali/rune-ui"
+Documentation = "https://lpasquali.github.io/rune-docs/"
+Repository = "https://github.com/lpasquali/rune-ui"
+Issues = "https://github.com/lpasquali/rune-ui/issues"
+
 [project.optional-dependencies]
 dev = [
     "pytest",
