@@ -17,7 +17,7 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/lpasquali/rune-ui"
+Homepage = "https://lpasquali.github.io/rune-docs/"
 Documentation = "https://lpasquali.github.io/rune-docs/"
 Repository = "https://github.com/lpasquali/rune-ui"
 Issues = "https://github.com/lpasquali/rune-ui/issues"
