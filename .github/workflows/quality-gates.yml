@@ -351,13 +351,6 @@ jobs:
           for row in warned[:10]:
               print(f'WARN  [constrained/unfixable] {row[0]}  cvss={row[1]:.1f}  src={row[2]}')
 
-          branch = os.environ.get('BRANCH_NAME', '')
-          strict_branch = branch in {'main', 'develop'}
-          print(f'Branch              : {branch} (strict={strict_branch})')
-
-          if blocked and not strict_branch:
-              print('Non-protected branch detected: reporting fixable CVEs without blocking merge.')
-              raise SystemExit(0)
           if blocked:
               raise SystemExit(1)
           PY
