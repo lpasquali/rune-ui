@@ -5,11 +5,46 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RUNE — Reliability Use-case Numeric Evaluator</title>
     <script src="https://unpkg.com/htmx.org@2.0.0"></script>
-    <link rel="stylesheet" href="/static/solarized.css">
+    <link rel="stylesheet" href="/static/css/rune-tokens.css">
+    <link rel="stylesheet" href="/static/css/solarized.css">
+    <link rel="stylesheet" href="/static/css/rune-print.css" media="print">
+    <script>
+        // Apply theme early to prevent flash
+        (function() {
+            var theme = localStorage.getItem('rune-theme') || 'auto';
+            if (theme !== 'auto') {
+                document.documentElement.setAttribute('data-theme', theme);
+            }
+        })();
+        
+        function setTheme(theme) {
+            localStorage.setItem('rune-theme', theme);
+            if (theme === 'auto') {
+                document.documentElement.removeAttribute('data-theme');
+            } else {
+                document.documentElement.setAttribute('data-theme', theme);
+            }
+        }
+    </script>
 </head>
 <body>
     <header>
-        <h1>RUNE <small style="font-size: 0.5em; color: var(--base01)">// INDUSTRIAL SRE AGENTIC PIPELINES</small></h1>
+        <h1>RUNE <small style="font-size: 0.5em; color: var(--border-color)">// INDUSTRIAL SRE AGENTIC PIPELINES</small></h1>
+        <div data-theme-toggle>
+            <label for="theme-selector" style="font-size: 0.8em; margin-right: 5px;">Theme:</label>
+            <select id="theme-selector" onchange="setTheme(this.value)">
+                <option value="auto">Auto</option>
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+                <option value="high-contrast">High Contrast</option>
+                <option value="dyslexia-friendly">Dyslexia Friendly</option>
+                <option value="reduced-motion">Reduced Motion</option>
+                <option value="print">Print</option>
+            </select>
+            <script>
+                document.getElementById('theme-selector').value = localStorage.getItem('rune-theme') || 'auto';
+            </script>
+        </div>
     </header>
     
     <div class="container">
