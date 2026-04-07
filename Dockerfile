@@ -1,5 +1,5 @@
 # RUNE UI Dockerfile (Zero NPM)
-FROM python:3.13-slim-bookworm
+FROM python:3.14-slim-bookworm
 
 # 1. Security: Create non-root user
 RUN groupadd -r rune && useradd -r -g rune -u 1000 rune
