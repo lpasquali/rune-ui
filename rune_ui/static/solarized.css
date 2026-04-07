@@ -101,3 +101,41 @@ button:hover {
     background: rgba(0,0,0,0.7);
     z-index: 999;
 }
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+th {
+    text-align: left;
+    padding: 10px;
+    border-bottom: 2px solid var(--base02);
+    color: var(--blue);
+}
+
+td {
+    padding: 10px;
+    border-bottom: 1px solid var(--base02);
+}
+
+code {
+    background: var(--base03);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Fira Code', 'Courier New', Courier, monospace;
+}
+
+input[type="text"],
+input[type="number"] {
+    background: var(--base03);
+    color: var(--base0);
+    border: 1px solid var(--base01);
+    padding: 8px;
+    font-family: inherit;
+}
+
+label {
+    color: var(--base1);
+}

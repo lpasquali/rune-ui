@@ -1,0 +1,7 @@
+<div class="modal" style="border-color: var(--red)">
+    <h3>{{ title }}</h3>
+    <p>{{ message }}</p>
+    {% if detail %}<p style="color: var(--base01)">Detail: {{ detail }}</p>{% endif %}
+    {% if help %}<p>{{ help }}</p>{% endif %}
+    <button hx-get="/benchmarks" hx-target="#main">Back</button>
+</div>
