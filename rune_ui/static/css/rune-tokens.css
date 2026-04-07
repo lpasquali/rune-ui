@@ -1,3 +1,17 @@
+@font-face {
+  font-family: 'Fira Code';
+  src: url('../fonts/FiraCode-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'OpenDyslexic';
+  src: url('../fonts/OpenDyslexic-Regular.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
 :root {
   /* Default Auto (Dark) */
   --bg-color: #002b36;
