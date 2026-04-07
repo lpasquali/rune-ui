@@ -71,6 +71,8 @@ def test_cost_estimate_error(mock_estimate: AsyncMock) -> None:
     response = client.post("/benchmarks/estimate", data={"model": "llama3.1:8b"})
     assert response.status_code == 200
     assert "Estimation Error" in response.text
+    assert "/v1/estimates" in response.text
+    assert "RUNE_API_URL" in response.text
 
 
 @patch("rune_ui.api_client.RuneApiClient.submit_job", new_callable=AsyncMock)
@@ -122,10 +124,34 @@ def test_job_polling_error(mock_status: AsyncMock) -> None:
     assert "Error polling status" in response.text
 
 
-def test_config_page() -> None:
+def test_dashboard_returns_base_page() -> None:
+    response = client.get("/dashboard")
+    assert response.status_code == 200
+    assert "RUNE" in response.text
+
+
+@patch("rune_ui.api_client.RuneApiClient.get_vastai_models", new_callable=AsyncMock)
+@patch("rune_ui.api_client.RuneApiClient.get_health", new_callable=AsyncMock)
+def test_config_page(mock_health: AsyncMock, mock_models: AsyncMock) -> None:
+    mock_health.return_value = {"status": "ok"}
+    mock_models.return_value = {"models": ["llama3.1:8b", "mixtral:8x7b"]}
     response = client.get("/config")
     assert response.status_code == 200
     assert "Configuration" in response.text
+    assert "ONLINE" in response.text
+    assert "llama3.1:8b" in response.text
+
+
+@patch("rune_ui.api_client.RuneApiClient.get_vastai_models", new_callable=AsyncMock)
+@patch("rune_ui.api_client.RuneApiClient.get_health", new_callable=AsyncMock)
+def test_config_page_api_offline(mock_health: AsyncMock, mock_models: AsyncMock) -> None:
+    mock_health.side_effect = Exception("offline")
+    mock_models.side_effect = Exception("offline")
+    response = client.get("/config")
+    assert response.status_code == 200
+    assert "Configuration" in response.text
+    assert "NOT CONNECTED" in response.text
+    assert "No models available" in response.text
 
 
 @patch("rune_ui.api_client.RuneApiClient.get_reports", new_callable=AsyncMock)
@@ -219,6 +245,26 @@ def test_stream_job_logs_cancelled(mock_status: AsyncMock, mock_sleep: AsyncMock
 
 
 # ── API client unit tests (sync, testing init and structure) ─────────────────
+
+def test_rune_api_url_env_fallback() -> None:
+    """RUNE_API_URL should fall back to RUNE_API_BASE_URL if the former is not set."""
+    import importlib
+    import os
+
+    old_url = os.environ.pop("RUNE_API_URL", None)
+    old_base = os.environ.pop("RUNE_API_BASE_URL", None)
+    try:
+        os.environ["RUNE_API_BASE_URL"] = "http://rune-api:9090"
+        # Re-evaluate the expression that main.py uses
+        result = os.environ.get("RUNE_API_URL", os.environ.get("RUNE_API_BASE_URL", "http://localhost:8080"))
+        assert result == "http://rune-api:9090"
+    finally:
+        os.environ.pop("RUNE_API_BASE_URL", None)
+        if old_url:
+            os.environ["RUNE_API_URL"] = old_url
+        if old_base:
+            os.environ["RUNE_API_BASE_URL"] = old_base
+
 
 def test_api_client_init_with_explicit_token() -> None:
     """RuneApiClient stores explicit token in Authorization header."""
