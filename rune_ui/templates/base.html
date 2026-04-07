@@ -5,7 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RUNE — Reliability Use-case Numeric Evaluator</title>
     <script src="https://unpkg.com/htmx.org@2.0.0"></script>
-    <link rel="stylesheet" href="/static/solarized.css">
+    <link rel="stylesheet" href="/static/css/rune-tokens.css">
+    <link rel="stylesheet" href="/static/css/solarized.css">
+    <link rel="stylesheet" href="/static/css/rune-print.css" media="print">
+    <script>
+        // Apply theme early to prevent flash
+        (function() {
+            var theme = localStorage.getItem('rune-theme') || 'auto';
+            if (theme !== 'auto') {
+                document.documentElement.setAttribute('data-theme', theme);
+            }
+        })();
+        
+        function setTheme(theme) {
+            localStorage.setItem('rune-theme', theme);
+            if (theme === 'auto') {
+                document.documentElement.removeAttribute('data-theme');
+            } else {
+                document.documentElement.setAttribute('data-theme', theme);
+            }
+        }
+    </script>
 </head>
 <body>
     <header>
