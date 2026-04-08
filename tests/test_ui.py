@@ -628,3 +628,18 @@ def test_solarized_light_css_serves_successfully() -> None:
     response = client.get("/static/solarized-light.css")
     assert response.status_code == 200
     assert "data-theme" in response.text
+# ── Issue #34: print stylesheet ─────────────────────────────────────────────
+
+
+def test_index_contains_print_css_link() -> None:
+    """GET / must include a link to print.css."""
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "/static/print.css" in response.text
+
+
+def test_print_css_serves_successfully() -> None:
+    """GET /static/print.css must return 200."""
+    response = client.get("/static/print.css")
+    assert response.status_code == 200
+    assert "@media print" in response.text
