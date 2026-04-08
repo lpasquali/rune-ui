@@ -6,6 +6,7 @@
     <title>RUNE — Reliability Use-case Numeric Evaluator</title>
     <script src="https://unpkg.com/htmx.org@2.0.0"></script>
     <link rel="stylesheet" href="/static/solarized.css">
+    <link rel="stylesheet" href="/static/solarized-light.css">
 </head>
 <body>
     <header>
@@ -16,6 +17,28 @@
             </button>
         </div>
     </header>
+    <script>
+    (function() {
+        var btn = document.getElementById('theme-toggle');
+        function applyTheme(theme) {
+            document.body.setAttribute('data-theme', theme);
+            btn.textContent = theme === 'light' ? 'Light' : 'Dark';
+        }
+        var saved = localStorage.getItem('rune-theme');
+        if (saved) {
+            applyTheme(saved);
+        } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+            applyTheme('light');
+        } else {
+            applyTheme('dark');
+        }
+        btn.addEventListener('click', function() {
+            var next = document.body.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+            localStorage.setItem('rune-theme', next);
+            applyTheme(next);
+        });
+    })();
+    </script>
     
     <div class="container">
         <nav>

@@ -611,3 +611,20 @@ def test_job_tracker_shows_integrity_badge() -> None:
     assert response.status_code == 200
     assert "log-integrity-badge" in response.text
     assert "Security Integrity" in response.text or "Verifying" in response.text
+
+
+# ── Issue #33: theme mode switcher ──────────────────────────────────────────
+
+
+def test_index_contains_theme_toggle_button() -> None:
+    """GET / must include the theme toggle button."""
+    response = client.get("/")
+    assert response.status_code == 200
+    assert 'id="theme-toggle"' in response.text
+
+
+def test_solarized_light_css_serves_successfully() -> None:
+    """GET /static/solarized-light.css must return 200."""
+    response = client.get("/static/solarized-light.css")
+    assert response.status_code == 200
+    assert "data-theme" in response.text
