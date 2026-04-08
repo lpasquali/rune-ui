@@ -10,6 +10,11 @@
 <body>
     <header>
         <h1>RUNE <small style="font-size: 0.5em; color: var(--base01)">// INDUSTRIAL SRE AGENTIC PIPELINES</small></h1>
+        <div class="theme-controls">
+            <button id="theme-toggle" onclick="toggleTheme()" title="Toggle Light/Dark Theme">
+                <span id="theme-icon">◑</span>
+            </button>
+        </div>
     </header>
     
     <div class="container">
@@ -32,5 +37,31 @@
             </div>
         </main>
     </div>
+
+    <script>
+        function toggleTheme() {
+            const body = document.body;
+            body.classList.toggle('light-theme');
+            const isLight = body.classList.contains('light-theme');
+            localStorage.setItem('theme', isLight ? 'light' : 'dark');
+            updateThemeIcon(isLight);
+        }
+
+        function updateThemeIcon(isLight) {
+            const icon = document.getElementById('theme-icon');
+            icon.textContent = isLight ? '☀️' : '🌙';
+        }
+
+        // Initialize theme from localStorage
+        (function() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'light') {
+                document.body.classList.add('light-theme');
+                updateThemeIcon(true);
+            } else {
+                updateThemeIcon(false);
+            }
+        })();
+    </script>
 </body>
 </html>
