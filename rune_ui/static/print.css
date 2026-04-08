@@ -1,0 +1,108 @@
+/* Print stylesheet for RUNE UI */
+@media print {
+    /* Hide non-essential UI elements */
+    nav,
+    .sidebar,
+    #theme-toggle,
+    .modal,
+    .overlay,
+    footer,
+    button {
+        display: none !important;
+    }
+
+    /* White background, black text */
+    body {
+        background-color: #fff !important;
+        color: #000 !important;
+        font-family: 'Courier New', Courier, monospace;
+        padding: 10px;
+    }
+
+    /* Override container grid to single column */
+    .container {
+        display: block !important;
+    }
+
+    /* Headings */
+    h1, h2, h3, h4, h5, h6 {
+        color: #000 !important;
+    }
+
+    /* Show link URLs after anchors */
+    a[href]::after {
+        content: " (" attr(href) ")";
+        font-size: 0.85em;
+        color: #333;
+    }
+
+    a {
+        color: #000 !important;
+        text-decoration: underline;
+    }
+
+    /* Code blocks */
+    code, pre {
+        background: #f5f5f5 !important;
+        color: #000 !important;
+        border: 1px solid #ccc;
+        overflow: visible !important;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        font-family: 'Courier New', Courier, monospace;
+    }
+
+    /* Tables */
+    table {
+        border-collapse: collapse;
+        width: 100%;
+    }
+
+    th, td {
+        border: 1px solid #000 !important;
+        padding: 6px;
+        color: #000 !important;
+    }
+
+    /* Alternating row colors in grayscale */
+    tr:nth-child(even) {
+        background-color: #f0f0f0 !important;
+    }
+
+    tr:nth-child(odd) {
+        background-color: #fff !important;
+    }
+
+    th {
+        background-color: #ddd !important;
+    }
+
+    /* Cards: remove dark backgrounds, use borders */
+    .card {
+        background: #fff !important;
+        border: 1px solid #999 !important;
+        color: #000 !important;
+    }
+
+    /* Page break rules */
+    .card, pre, table {
+        page-break-inside: avoid;
+    }
+
+    /* Header styling for print */
+    header {
+        border-bottom: 2px solid #000;
+    }
+
+    /* Input fields */
+    input, select, textarea {
+        border: 1px solid #000 !important;
+        background: #fff !important;
+        color: #000 !important;
+    }
+
+    /* Labels */
+    label {
+        color: #000 !important;
+    }
+}
