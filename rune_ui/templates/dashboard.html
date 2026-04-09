@@ -1,0 +1,56 @@
+<div class="card">
+    <h2>Dashboard</h2>
+    <p>System Overview & Recent Runs</p>
+
+    <div style="margin-top: 20px; margin-bottom: 20px; height: 300px; width: 100%;">
+        <canvas id="costChart"></canvas>
+    </div>
+
+    <h3>Recent Activity</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Job ID</th>
+                <th>Status</th>
+                <th>Duration (ms)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for event in events %}
+            <tr>
+                <td>{{ event.job_id | default("N/A") }}</td>
+                <td>{{ event.status | default("N/A") }}</td>
+                <td>{{ event.duration_ms | default(0) }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="3">No recent activity.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <script>
+        (function() {
+            if (window.dashboardChart) {
+                window.dashboardChart.destroy();
+            }
+            const ctx = document.getElementById('costChart').getContext('2d');
+            window.dashboardChart = new Chart(ctx, {
+                type: 'bar',
+                data: {{ chart_data | tojson | safe }},
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: 'var(--base0)' } }
+                    },
+                    scales: {
+                        x: { ticks: { color: 'var(--base0)' }, grid: { color: 'var(--base02)' } },
+                        y: { ticks: { color: 'var(--base0)' }, grid: { color: 'var(--base02)' } }
+                    }
+                }
+            });
+        })();
+    </script>
+</div>

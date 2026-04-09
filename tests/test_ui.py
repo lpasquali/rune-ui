@@ -127,12 +127,6 @@ def test_job_polling_error(mock_status: AsyncMock) -> None:
     assert "Error polling status" in response.text
 
 
-def test_dashboard_returns_base_page() -> None:
-    response = client.get("/dashboard")
-    assert response.status_code == 200
-    assert "RUNE" in response.text
-
-
 @patch("rune_ui.api_client.RuneApiClient.get_vastai_models", new_callable=AsyncMock)
 @patch("rune_ui.api_client.RuneApiClient.get_health", new_callable=AsyncMock)
 def test_config_page(mock_health: AsyncMock, mock_models: AsyncMock) -> None:

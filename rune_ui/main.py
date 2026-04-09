@@ -249,8 +249,57 @@ async def poll_job_status(request: Request, job_id: str) -> str:
 
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request) -> Any:
-    """Redirect /dashboard to the index (the index serves as the dashboard)."""
-    return templates.TemplateResponse(request, "base.html")
+    try:
+        reports_data = await api_client.get_reports()
+        events = reports_data.get("events", [])
+        
+        labels = []
+        data_points = []
+        for ev in events:
+            labels.append(ev.get("job_id", "Unknown"))
+            data_points.append(ev.get("duration_ms", 0) / 1000)
+            
+        chart_data = {
+            "labels": labels,
+            "datasets": [{
+                "label": "Duration (s)",
+                "data": data_points,
+                "backgroundColor": "rgba(99, 102, 241, 0.5)",
+                "borderColor": "rgba(99, 102, 241, 1)",
+                "borderWidth": 1
+            }]
+        }
+        return templates.TemplateResponse(request, "dashboard.html", {"chart_data": chart_data, "events": events})
+    except Exception:
+        log.exception("Failed to load dashboard")
+        return '<div class="card" style="border-color: var(--red)"><h3>Error</h3><p>Unable to load dashboard.</p></div>'
+
+@app.get("/compare", response_class=HTMLResponse)
+async def compare(request: Request) -> Any:
+    try:
+        reports_data = await api_client.get_reports()
+        events = reports_data.get("events", [])
+        
+        labels = []
+        data_points = []
+        for ev in events:
+            labels.append(ev.get("job_id", "Unknown"))
+            data_points.append(ev.get("duration_ms", 0) / 1000)
+            
+        chart_data = {
+            "labels": labels,
+            "datasets": [{
+                "label": "Duration (s)",
+                "data": data_points,
+                "backgroundColor": "rgba(52, 211, 153, 0.5)",
+                "borderColor": "rgba(52, 211, 153, 1)",
+                "borderWidth": 1
+            }]
+        }
+        return templates.TemplateResponse(request, "compare.html", {"chart_data": chart_data, "events": events})
+    except Exception:
+        log.exception("Failed to load compare")
+        return '<div class="card" style="border-color: var(--red)"><h3>Error</h3><p>Unable to load comparison.</p></div>'
 
 
 @app.get("/config", response_class=HTMLResponse)
