@@ -1,20 +1,52 @@
 <div class="card">
-    <h2>Run Benchmark</h2>
-    <form hx-post="/benchmarks/estimate" hx-target="#main" hx-swap="beforeend">
-        <label for="model">LLM Model:</label>
-        <input type="text" id="model" name="model" value="llama3.1:8b" required><br><br>
+    <h2 style="color: var(--blue);">New Benchmark Wizard</h2>
+    <form hx-post="/benchmarks/estimate" hx-target="#main" hx-swap="beforeend" class="wizard-form">
         
-        <label>
-            <input type="checkbox" name="vastai" value="true"> Use Vast.ai Provisioning
-        </label><br>
-        
-        <label for="max_dph">Max $/hr (DPH):</label>
-        <input type="number" step="0.01" name="max_dph" value="2.50"><br><br>
+        <fieldset style="border: 1px solid var(--base02); padding: 20px; margin-bottom: 20px; border-radius: 4px;">
+            <legend style="color: var(--cyan); font-weight: bold; padding: 0 10px;">1. Task Configuration</legend>
+            <label for="kind">Job Type:</label>
+            <select id="kind" name="kind" style="width: 100%; margin-bottom: 15px; padding: 8px; background: var(--base03); color: var(--base0); border: 1px solid var(--base01);">
+                <option value="benchmark">Full Suite Benchmark</option>
+                <option value="agentic-agent">Single Agent Run</option>
+            </select>
+            
+            <label for="agent">Target Agent (if Single Agent):</label>
+            <input type="text" id="agent" name="agent" value="sre:k8sgpt" style="width: 100%; margin-bottom: 15px;">
 
-        <label>
-            <input type="checkbox" name="local_hardware" value="true"> Use Local Hardware (Airgapped)
-        </label><br><br>
+            <label for="question">Question / Prompt:</label>
+            <textarea id="question" name="question" style="width: 100%; height: 60px; margin-bottom: 10px; background: var(--base03); color: var(--base0); border: 1px solid var(--base01); padding: 8px;">What is unhealthy in this Kubernetes cluster?</textarea>
+        </fieldset>
 
-        <button type="submit">Evaluate Cost & Proceed</button>
+        <fieldset style="border: 1px solid var(--base02); padding: 20px; margin-bottom: 20px; border-radius: 4px;">
+            <legend style="color: var(--cyan); font-weight: bold; padding: 0 10px;">2. AI Backend Configuration</legend>
+            <label for="backend_type">Backend Provider:</label>
+            <select id="backend_type" name="backend_type" style="width: 100%; margin-bottom: 15px; padding: 8px; background: var(--base03); color: var(--base0); border: 1px solid var(--base01);">
+                <option value="ollama">Ollama (Local/Vast)</option>
+                <option value="openai">OpenAI (SaaS)</option>
+                <option value="bedrock">AWS Bedrock</option>
+            </select>
+
+            <label for="model">LLM Model:</label>
+            <input type="text" id="model" name="model" value="llama3.1:8b" required style="width: 100%; margin-bottom: 15px;">
+
+            <label for="backend_url">Custom Backend URL (Optional):</label>
+            <input type="text" id="backend_url" name="backend_url" placeholder="http://10.0.0.5:11434" style="width: 100%; margin-bottom: 10px;">
+        </fieldset>
+
+        <fieldset style="border: 1px solid var(--base02); padding: 20px; margin-bottom: 20px; border-radius: 4px;">
+            <legend style="color: var(--cyan); font-weight: bold; padding: 0 10px;">3. Compute Infrastructure</legend>
+            <label>
+                <input type="checkbox" name="vastai" value="true"> Provision cloud GPU via Vast.ai
+            </label><br><br>
+            
+            <label for="max_dph">Vast.ai Max $/hr (DPH):</label>
+            <input type="number" step="0.01" name="max_dph" value="2.50" style="margin-bottom: 15px; width: 100%;"><br>
+
+            <label>
+                <input type="checkbox" name="local_hardware" value="true"> Bypass Cost Safety (Local Airgapped Hardware)
+            </label>
+        </fieldset>
+
+        <button type="submit" style="width: 100%; padding: 15px; font-size: 1.1em; font-weight: bold; background: var(--blue); color: var(--base03); border: none; cursor: pointer;">EVALUATE COST & PROCEED</button>
     </form>
 </div>
