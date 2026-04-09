@@ -13,7 +13,7 @@
 <div class="run-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
   <div class="card" style="background: var(--base02); padding: 20px; border-radius: 4px; border: 1px solid var(--base01);">
     <h3 style="margin-top: 0; color: var(--cyan);">Status</h3>
-    <div hx-get="/runs/{{ run.id }}/status" hx-trigger="every 2s" hx-swap="outerHTML">
+    <div hx-get="/runs/{{ run_id_path }}/status" hx-trigger="every 2s" hx-swap="outerHTML">
       <p>Status: <strong style="color: var(--yellow);">{{ run.status }}</strong></p>
     </div>
   </div>
@@ -30,7 +30,7 @@
 
 <div class="card" style="background: var(--base02); padding: 20px; border-radius: 4px; border: 1px solid var(--base01); margin-top: 20px;">
   <h3 style="margin-top: 0; color: var(--cyan);">Browser Live View</h3>
-  <div hx-ext="sse" sse-connect="/api/v1/runs/{{ run.id }}/browser-stream" style="text-align: center; background: var(--base03); padding: 10px; border-radius: 4px;">
+  <div hx-ext="sse" sse-connect="/api/v1/runs/{{ run_id_path }}/browser-stream" style="text-align: center; background: var(--base03); padding: 10px; border-radius: 4px;">
     <img sse-swap="screenshot" id="browser-view" style="max-width: 100%; border: 1px solid var(--base01); border-radius: 4px;" src="/static/placeholder.png" alt="Live browser view">
   </div>
 </div>
@@ -38,7 +38,7 @@
 <div class="card" style="background: var(--base02); padding: 20px; border-radius: 4px; border: 1px solid var(--base01); margin-top: 20px;">
   <h3 style="margin-top: 0; color: var(--cyan);">Trace Log</h3>
   <div style="background: var(--base03); padding: 15px; border-radius: 4px; height: 300px; overflow-y: auto; font-family: monospace; color: var(--base0);">
-    <div hx-ext="sse" sse-connect="/api/v1/runs/{{ run.id }}/trace" sse-swap="log" hx-swap="beforeend">
+    <div hx-ext="sse" sse-connect="/api/v1/runs/{{ run_id_path }}/trace" sse-swap="log" hx-swap="beforeend">
     </div>
   </div>
 </div>

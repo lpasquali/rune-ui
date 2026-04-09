@@ -10,7 +10,6 @@ import logging
 import os
 from pathlib import Path
 import secrets
-from urllib.parse import quote
 from typing import Any, AsyncGenerator, Optional
 
 from fastapi import FastAPI, Form, Request
@@ -18,7 +17,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from rune_ui.api_client import RuneApiClient
+from rune_ui.api_client import RuneApiClient, quote_path_segments
 
 log = logging.getLogger(__name__)
 
@@ -276,7 +275,7 @@ async def get_reports_page(request: Request) -> Any:
         return '<div class="card" style="border-color: var(--red)"><h3>Reports Error</h3><p>Unable to load reports.</p></div>'
 
 
-@app.get("/chains/{run_id}", response_class=HTMLResponse)
+@app.get("/chains/{run_id:path}", response_class=HTMLResponse)
 async def get_chain_page(request: Request, run_id: str) -> Any:
     """Render the multi-agent chain DAG page for `run_id` (Issue #99).
 
@@ -318,7 +317,7 @@ async def get_chain_page(request: Request, run_id: str) -> Any:
     )
 
 
-@app.get("/reports/{job_id}", response_class=HTMLResponse)
+@app.get("/reports/{job_id:path}", response_class=HTMLResponse)
 async def view_report(request: Request, job_id: str) -> Any:
     """BFF logic to fetch and display a specific historical report."""
     try:
@@ -328,7 +327,7 @@ async def view_report(request: Request, job_id: str) -> Any:
         log.exception("Failed to load report %s", job_id)
         return '<div class="card" style="border-color: var(--red)"><h3>Report Error</h3><p>Unable to load report.</p></div>'
 
-@app.get("/audits/{run_id}", response_class=HTMLResponse)
+@app.get("/audits/{run_id:path}", response_class=HTMLResponse)
 async def get_audits_page(request: Request, run_id: str) -> Any:
     """Render the audit artifacts shell for a benchmark run (Issue #100).
 
@@ -349,7 +348,33 @@ async def get_audits_page(request: Request, run_id: str) -> Any:
     )
 
 
-@app.get("/runs/{run_id}", response_class=HTMLResponse)
+@app.get("/runs/{run_id:path}/status", response_class=HTMLResponse)
+async def get_run_status(request: Request, run_id: str) -> Any:
+    try:
+        data = await api_client.get_job_status(run_id)
+        status = data.get("status", "unknown")
+
+        status_safe = html.escape(str(status), quote=True)
+        html_str = (
+            f'<p>Status: <strong style="color: var(--yellow);">{status_safe}</strong></p>'
+        )
+        poll_path = f"/runs/{quote_path_segments(run_id)}/status"
+        poll_path_attr = html.escape(poll_path, quote=True)
+        if status not in ["completed", "failed"]:
+            return HTMLResponse(
+                content=(
+                    f'<div hx-get="{poll_path_attr}" hx-trigger="every 2s" '
+                    f'hx-swap="outerHTML">{html_str}</div>'
+                )
+            )
+        return HTMLResponse(content=f"<div>{html_str}</div>")
+    except Exception:
+        return HTMLResponse(
+            content='<p>Status: <strong style="color: var(--red);">error</strong></p>'
+        )
+
+
+@app.get("/runs/{run_id:path}", response_class=HTMLResponse)
 async def run_detail_view(request: Request, run_id: str) -> Any:
     try:
         data = await api_client.get_job_status(run_id)
@@ -368,46 +393,25 @@ async def run_detail_view(request: Request, run_id: str) -> Any:
             "cost_usd": telemetry.get("cost_usd", "0.00"),
             "tokens": tokens.get("total_tokens", 0),
         }
-        return templates.TemplateResponse(request, "run_detail.html", {"run": run_info})
+        run_id_path = quote_path_segments(str(run_info["id"]))
+        return templates.TemplateResponse(
+            request,
+            "run_detail.html",
+            {"run": run_info, "run_id_path": run_id_path},
+        )
     except Exception:
         log.exception("Failed to load run detail %s", run_id)
         return '<div class="card" style="border-color: var(--red)"><h3>Error</h3><p>Unable to load run details.</p></div>'
 
 
-@app.get("/runs/{run_id}/status", response_class=HTMLResponse)
-async def get_run_status(request: Request, run_id: str) -> Any:
-    try:
-        data = await api_client.get_job_status(run_id)
-        status = data.get("status", "unknown")
-
-        status_safe = html.escape(str(status), quote=True)
-        html_str = (
-            f'<p>Status: <strong style="color: var(--yellow);">{status_safe}</strong></p>'
-        )
-        poll_path = f"/runs/{quote(run_id, safe='')}/status"
-        poll_path_attr = html.escape(poll_path, quote=True)
-        if status not in ["completed", "failed"]:
-            return HTMLResponse(
-                content=(
-                    f'<div hx-get="{poll_path_attr}" hx-trigger="every 2s" '
-                    f'hx-swap="outerHTML">{html_str}</div>'
-                )
-            )
-        return HTMLResponse(content=f"<div>{html_str}</div>")
-    except Exception:
-        return HTMLResponse(
-            content='<p>Status: <strong style="color: var(--red);">error</strong></p>'
-        )
-
-
-@app.get("/api/v1/runs/{run_id}/trace")
+@app.get("/api/v1/runs/{run_id:path}/trace")
 async def stream_run_trace(run_id: str) -> StreamingResponse:
     async def proxy_generator():
         async with httpx.AsyncClient() as client:
             try:
                 async with client.stream(
                     "GET",
-                    f"{api_client.base_url}/v1/runs/{run_id}/trace",
+                    f"{api_client.base_url}/v1/runs/{quote_path_segments(run_id)}/trace",
                     headers=api_client.headers,
                 ) as response:
                     async for chunk in response.aiter_bytes():
@@ -419,14 +423,14 @@ async def stream_run_trace(run_id: str) -> StreamingResponse:
     return StreamingResponse(proxy_generator(), media_type="text/event-stream")
 
 
-@app.get("/api/v1/runs/{run_id}/browser-stream")
+@app.get("/api/v1/runs/{run_id:path}/browser-stream")
 async def stream_browser_view(run_id: str) -> StreamingResponse:
     async def proxy_generator():
         async with httpx.AsyncClient() as client:
             try:
                 async with client.stream(
                     "GET",
-                    f"{api_client.base_url}/v1/runs/{run_id}/browser-stream",
+                    f"{api_client.base_url}/v1/runs/{quote_path_segments(run_id)}/browser-stream",
                     headers=api_client.headers,
                 ) as response:
                     if response.status_code == 404:
