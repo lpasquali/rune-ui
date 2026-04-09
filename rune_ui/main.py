@@ -10,6 +10,7 @@ import logging
 import os
 from pathlib import Path
 import secrets
+from urllib.parse import quote
 from typing import Any, AsyncGenerator, Optional
 
 from fastapi import FastAPI, Form, Request
@@ -379,10 +380,18 @@ async def get_run_status(request: Request, run_id: str) -> Any:
         data = await api_client.get_job_status(run_id)
         status = data.get("status", "unknown")
 
-        html_str = f'<p>Status: <strong style="color: var(--yellow);">{status}</strong></p>'
+        status_safe = html.escape(str(status), quote=True)
+        html_str = (
+            f'<p>Status: <strong style="color: var(--yellow);">{status_safe}</strong></p>'
+        )
+        poll_path = f"/runs/{quote(run_id, safe='')}/status"
+        poll_path_attr = html.escape(poll_path, quote=True)
         if status not in ["completed", "failed"]:
             return HTMLResponse(
-                content=f'<div hx-get="/runs/{run_id}/status" hx-trigger="every 2s" hx-swap="outerHTML">{html_str}</div>'
+                content=(
+                    f'<div hx-get="{poll_path_attr}" hx-trigger="every 2s" '
+                    f'hx-swap="outerHTML">{html_str}</div>'
+                )
             )
         return HTMLResponse(content=f"<div>{html_str}</div>")
     except Exception:
