@@ -480,6 +480,75 @@ async def get_run_status(request: Request, run_id: str) -> Any:
         )
 
 
+@app.get("/runs/{run_id:path}/interaction", response_class=HTMLResponse)
+async def poll_interaction(request: Request, run_id: str) -> Any:
+    """Poll for a manual interaction prompt."""
+    run_path = quote_path_segments(run_id)
+    poll_url = f"/runs/{run_path}/interaction"
+    poll_attr = html.escape(poll_url, quote=True)
+    try:
+        interaction = await api_client.get_interaction(run_id)
+        if not interaction:
+            return HTMLResponse(
+                content=(
+                    f'<div hx-get="{poll_attr}" hx-trigger="every 2s" '
+                    f'hx-swap="outerHTML" style="color: var(--base01); font-style: italic;">'
+                    f"No pending prompts.</div>"
+                )
+            )
+
+        prompt = interaction.get("prompt", "Please provide input:")
+        return templates.TemplateResponse(
+            request,
+            "interaction_form.html",
+            {
+                "run_id": run_id,
+                "run_id_path": run_path,
+                "prompt": prompt,
+            },
+        )
+    except Exception:
+        log.exception("Failed to poll interaction for %s", run_id)
+        return HTMLResponse(
+            content=(
+                f'<div hx-get="{poll_attr}" hx-trigger="every 5s" '
+                f'hx-swap="outerHTML" style="color: var(--red);">Error polling for prompts.</div>'
+            )
+        )
+
+
+@app.post("/runs/{run_id:path}/interaction", response_class=HTMLResponse)
+async def submit_interaction(request: Request, run_id: str, response: str = Form(...)) -> Any:
+    """Submit a manual interaction response."""
+    run_path = quote_path_segments(run_id)
+    poll_url = f"/runs/{run_path}/interaction"
+    poll_attr = html.escape(poll_url, quote=True)
+    try:
+        await api_client.submit_interaction(run_id, {"response": response})
+        return HTMLResponse(
+            content=(
+                f'<div hx-get="{poll_attr}" hx-trigger="load" '
+                f'hx-swap="outerHTML" style="color: var(--green);">'
+                f"Response submitted. Waiting for next...</div>"
+            )
+        )
+    except Exception as exc:
+        log.exception("Failed to submit interaction for %s", run_id)
+        err = html.escape(str(exc), quote=True)
+        return HTMLResponse(content=f'<div style="color: var(--red);">Error: {err}</div>')
+
+
+@app.get("/runs/{run_id:path}/terminal", response_class=HTMLResponse)
+async def interactive_terminal(request: Request, run_id: str) -> Any:
+    """Standalone page for the interactive terminal."""
+    run_id_path = quote_path_segments(run_id)
+    return templates.TemplateResponse(
+        request,
+        "interactive_terminal.html",
+        {"run_id": run_id, "run_id_path": run_id_path},
+    )
+
+
 @app.get("/runs/{run_id:path}", response_class=HTMLResponse)
 async def run_detail_view(request: Request, run_id: str) -> Any:
     try:
