@@ -9,8 +9,9 @@ import logging
 import os
 from pathlib import Path
 import secrets
-from typing import Any, AsyncGenerator
+from typing import Any, AsyncGenerator, Optional
 
+import httpx
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -272,6 +273,48 @@ async def get_reports_page(request: Request) -> Any:
     except Exception:
         log.exception("Failed to load reports")
         return '<div class="card" style="border-color: var(--red)"><h3>Reports Error</h3><p>Unable to load reports.</p></div>'
+
+
+@app.get("/chains/{run_id}", response_class=HTMLResponse)
+async def get_chain_page(request: Request, run_id: str) -> Any:
+    """Render the multi-agent chain DAG page for `run_id` (Issue #99).
+
+    Server-side rendering is an empty SVG shell; the client JS fetches state
+    from `GET /v1/chains/{run_id}/state` and updates the DOM. We pre-fetch the
+    initial state here so the page still renders useful content (and the right
+    HTTP status) on the first load — 404 if the run is unknown, 502 if the
+    backend is unreachable.
+    """
+    initial_state: Any = None
+    error_message: Optional[str] = None
+    status_code = 200
+    try:
+        initial_state = await api_client.get_chain_state(run_id)
+    except httpx.HTTPStatusError as exc:
+        # Pass through 404 (and other 4xx) from the backend to the client.
+        upstream = exc.response.status_code
+        status_code = upstream if upstream in (404, 400, 403) else 502
+        if upstream == 404:
+            error_message = f"Chain run '{run_id}' not found."
+        else:
+            error_message = f"Upstream error {upstream} fetching chain state."
+    except Exception as exc:
+        log.exception("Failed to fetch chain state for %s", run_id)
+        status_code = 502
+        error_message = f"Unable to reach RUNE API at {RUNE_API_URL}: {exc}"
+
+    return templates.TemplateResponse(
+        request,
+        "chain.html",
+        {
+            "run_id": run_id,
+            "initial_state": initial_state,
+            "initial_state_json": json.dumps(initial_state) if initial_state else "null",
+            "error_message": error_message,
+            "rune_api_url": RUNE_API_URL,
+        },
+        status_code=status_code,
+    )
 
 
 @app.get("/reports/{job_id}", response_class=HTMLResponse)

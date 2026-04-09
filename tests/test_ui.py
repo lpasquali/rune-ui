@@ -1,7 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
+from __future__ import annotations
+
+from typing import Any
 from unittest.mock import AsyncMock, patch
 
-import pytest
 from fastapi.testclient import TestClient
 
 from rune_ui.main import app
@@ -249,7 +251,6 @@ def test_stream_job_logs_cancelled(mock_status: AsyncMock, mock_sleep: AsyncMock
 
 def test_rune_api_url_env_fallback() -> None:
     """RUNE_API_URL should fall back to RUNE_API_BASE_URL if the former is not set."""
-    import importlib
     import os
 
     old_url = os.environ.pop("RUNE_API_URL", None)
@@ -347,9 +348,9 @@ def test_api_client_get_vastai_models() -> None:
     asyncio.run(_run())
 
 
-def _make_httpx_mock(json_data: dict) -> "tuple[Any, Any]":
-    """Helper: returns (mock_async_client, patch_target)."""
-    from unittest.mock import MagicMock, patch
+def _make_httpx_mock(json_data: dict) -> tuple[Any, Any]:
+    """Helper: returns (mock_async_client, mock_response)."""
+    from unittest.mock import MagicMock
 
     mock_response = MagicMock()
     mock_response.json.return_value = json_data
@@ -729,3 +730,196 @@ def test_audit_viewer_css_static_serves_200() -> None:
     print_block = css[idx:]
     for selector in (".audit-copy-btn", ".audit-preview-toggle", ".audit-download-btn"):
         assert selector in print_block, f"{selector} not hidden in @media print block"
+
+
+# ── Issue #99: /chains/{run_id} DAG page ─────────────────────────────────────
+
+
+def _make_chain_state(
+    run_id: str = "chain-abc",
+    overall: str = "success",
+) -> dict:
+    """Helper: canonical chain-state payload used by the UI tests."""
+    return {
+        "run_id": run_id,
+        "nodes": [
+            {
+                "id": "n1",
+                "agent_name": "planner",
+                "status": "success",
+                "started_at": 1_700_000_000.0,
+                "finished_at": 1_700_000_005.0,
+                "error": None,
+            },
+            {
+                "id": "n2",
+                "agent_name": "executor",
+                "status": "success",
+                "started_at": 1_700_000_006.0,
+                "finished_at": 1_700_000_010.0,
+                "error": None,
+            },
+        ],
+        "edges": [{"from": "n1", "to": "n2"}],
+        "overall_status": overall,
+    }
+
+
+@patch("rune_ui.api_client.RuneApiClient.get_chain_state", new_callable=AsyncMock)
+def test_chains_page_returns_200_with_run_id(mock_state: AsyncMock) -> None:
+    """GET /chains/{run_id} returns 200 and includes the run id in the body."""
+    mock_state.return_value = _make_chain_state("chain-abc", overall="success")
+    response = client.get("/chains/chain-abc")
+    assert response.status_code == 200
+    assert "chain-abc" in response.text
+
+
+@patch("rune_ui.api_client.RuneApiClient.get_chain_state", new_callable=AsyncMock)
+def test_chains_page_includes_dag_container_and_script(mock_state: AsyncMock) -> None:
+    """Page must include the SVG container, link to chain-dag.css and the JS module."""
+    mock_state.return_value = _make_chain_state()
+    response = client.get("/chains/chain-abc")
+    assert response.status_code == 200
+    assert 'id="chain-dag-svg"' in response.text
+    assert "/static/chain-dag.js" in response.text
+    assert "/static/chain-dag.css" in response.text
+    assert "chain-initial-state" in response.text
+    # Side panel + polling controls should be present server-side.
+    assert 'id="chain-side-panel"' in response.text
+    assert 'id="chain-poll-toggle"' in response.text
+
+
+@patch("rune_ui.api_client.RuneApiClient.get_chain_state", new_callable=AsyncMock)
+def test_chains_page_embeds_initial_state_json(mock_state: AsyncMock) -> None:
+    """Initial chain-state payload should be serialised into the page for SSR bootstrap."""
+    payload = _make_chain_state("chain-xyz", overall="running")
+    mock_state.return_value = payload
+    response = client.get("/chains/chain-xyz")
+    assert response.status_code == 200
+    # The agent names from our payload must appear in the SSR'd JSON island.
+    assert "planner" in response.text
+    assert "executor" in response.text
+    assert '"overall_status": "running"' in response.text
+
+
+@patch("rune_ui.api_client.RuneApiClient.get_chain_state", new_callable=AsyncMock)
+def test_chains_page_unknown_run_handles_404_from_api(mock_state: AsyncMock) -> None:
+    """If the backend returns 404, the chain page should surface a 404 with an explanation."""
+    import httpx as _httpx
+
+    request = _httpx.Request("GET", "http://api/v1/chains/missing/state")
+    response_obj = _httpx.Response(404, request=request)
+    mock_state.side_effect = _httpx.HTTPStatusError("404", request=request, response=response_obj)
+    response = client.get("/chains/missing")
+    assert response.status_code == 404
+    assert "not found" in response.text.lower()
+
+
+@patch("rune_ui.api_client.RuneApiClient.get_chain_state", new_callable=AsyncMock)
+def test_chains_page_upstream_500_returns_502(mock_state: AsyncMock) -> None:
+    """Upstream 500 should translate to 502 Bad Gateway on our page."""
+    import httpx as _httpx
+
+    request = _httpx.Request("GET", "http://api/v1/chains/broken/state")
+    response_obj = _httpx.Response(500, request=request)
+    mock_state.side_effect = _httpx.HTTPStatusError("500", request=request, response=response_obj)
+    response = client.get("/chains/broken")
+    assert response.status_code == 502
+    assert "upstream error" in response.text.lower()
+
+
+@patch("rune_ui.api_client.RuneApiClient.get_chain_state", new_callable=AsyncMock)
+def test_chains_page_transport_error_returns_502(mock_state: AsyncMock) -> None:
+    """Raw connection error (non-HTTPStatusError) should also return 502 with a helpful message."""
+    mock_state.side_effect = Exception("connection refused")
+    response = client.get("/chains/chain-abc")
+    assert response.status_code == 502
+    assert "Unable to reach RUNE API" in response.text
+
+
+def test_chain_dag_js_static_serves_200() -> None:
+    """GET /static/chain-dag.js must return 200 and include the render entry point."""
+    response = client.get("/static/chain-dag.js")
+    assert response.status_code == 200
+    assert "renderChainDAG" in response.text
+    assert "RUNE_CHAIN_DAG" in response.text
+
+
+def test_chain_dag_css_static_serves_200() -> None:
+    """GET /static/chain-dag.css must return 200 and include Solarized tokens + print rules."""
+    response = client.get("/static/chain-dag.css")
+    assert response.status_code == 200
+    assert "var(--blue)" in response.text
+    assert "@media print" in response.text
+    assert "chain-node-rect" in response.text
+
+
+def test_chain_dag_css_hides_interactive_controls_in_print() -> None:
+    """Print stylesheet must hide the refresh / poll / side-panel / nav link."""
+    response = client.get("/static/chain-dag.css")
+    assert response.status_code == 200
+    css = response.text
+    # Find the @media print block and verify selectors are hidden there.
+    idx = css.find("@media print")
+    assert idx != -1
+    print_block = css[idx:]
+    for selector in (
+        "#chain-refresh-btn",
+        "#chain-poll-toggle",
+        ".chain-nav-link",
+        ".chain-side-panel",
+    ):
+        assert selector in print_block, f"{selector} not hidden in @media print block"
+
+
+def test_api_client_get_chain_state_impl() -> None:
+    """RuneApiClient.get_chain_state calls the /v1/chains/{run_id}/state endpoint."""
+    import asyncio
+
+    from rune_ui.api_client import RuneApiClient
+
+    async def _run() -> None:
+        ac, mock_resp = _make_httpx_mock({
+            "run_id": "r1",
+            "nodes": [],
+            "edges": [],
+            "overall_status": "pending",
+        })
+        # raise_for_status is a MagicMock attribute — make it a no-op.
+        mock_resp.raise_for_status = lambda: None
+        with patch("rune_ui.api_client.httpx.AsyncClient", return_value=ac):
+            c = RuneApiClient(base_url="http://x")
+            result = await c.get_chain_state("r1")
+        assert result["run_id"] == "r1"
+        assert result["overall_status"] == "pending"
+
+    asyncio.run(_run())
+
+
+def test_api_client_get_chain_state_raises_on_404() -> None:
+    """RuneApiClient.get_chain_state propagates HTTPStatusError on 404."""
+    import asyncio
+
+    import httpx as _httpx
+
+    from rune_ui.api_client import RuneApiClient
+
+    async def _run() -> None:
+        ac, mock_resp = _make_httpx_mock({})
+        req = _httpx.Request("GET", "http://x/v1/chains/missing/state")
+        resp_404 = _httpx.Response(404, request=req)
+
+        def _raise() -> None:
+            raise _httpx.HTTPStatusError("404", request=req, response=resp_404)
+
+        mock_resp.raise_for_status = _raise
+        with patch("rune_ui.api_client.httpx.AsyncClient", return_value=ac):
+            c = RuneApiClient(base_url="http://x")
+            try:
+                await c.get_chain_state("missing")
+                raised = False
+            except _httpx.HTTPStatusError:
+                raised = True
+        assert raised, "Expected HTTPStatusError to propagate from raise_for_status()"
+
+    asyncio.run(_run())
