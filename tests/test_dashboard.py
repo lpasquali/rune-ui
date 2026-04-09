@@ -1,4 +1,4 @@
-import pytest
+# SPDX-License-Identifier: Apache-2.0
 from unittest.mock import AsyncMock, patch
 from fastapi.testclient import TestClient
 from rune_ui.main import app
