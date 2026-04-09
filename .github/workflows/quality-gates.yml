@@ -50,6 +50,9 @@ jobs:
     if: needs.changes.outputs.python == 'true'
     with:
       path-filter: ".*"
+      # Shared workflow targets rune (Ollama file + wheel smoke on py3.11); rune-ui has neither.
+      ollama-enabled: false
+      smoke-install-enabled: false
 
   container:
     needs: [changes, security]
