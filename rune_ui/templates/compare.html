@@ -1,0 +1,56 @@
+<div class="card">
+    <h2>Agent Compare</h2>
+    <p>Performance Leaderboard & Cost Analysis</p>
+
+    <div style="margin-top: 20px; margin-bottom: 20px; height: 300px; width: 100%;">
+        <canvas id="compareChart"></canvas>
+    </div>
+
+    <h3>Leaderboard</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Job ID</th>
+                <th>Status</th>
+                <th>Score</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for event in events %}
+            <tr>
+                <td>{{ event.job_id | default("N/A") }}</td>
+                <td>{{ event.status | default("N/A") }}</td>
+                <td>{{ event.score | default("N/A") }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="3">No data available for comparison.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <script>
+        (function() {
+            if (window.compareChart) {
+                window.compareChart.destroy();
+            }
+            const ctx = document.getElementById('compareChart').getContext('2d');
+            window.compareChart = new Chart(ctx, {
+                type: 'line',
+                data: {{ chart_data | tojson | safe }},
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: 'var(--base0)' } }
+                    },
+                    scales: {
+                        x: { ticks: { color: 'var(--base0)' }, grid: { color: 'var(--base02)' } },
+                        y: { ticks: { color: 'var(--base0)' }, grid: { color: 'var(--base02)' } }
+                    }
+                }
+            });
+        })();
+    </script>
+</div>
