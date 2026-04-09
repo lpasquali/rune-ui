@@ -315,3 +315,44 @@ async def view_report(request: Request, job_id: str) -> Any:
     except Exception:
         log.exception("Failed to load report %s", job_id)
         return '<div class="card" style="border-color: var(--red)"><h3>Report Error</h3><p>Unable to load report.</p></div>'
+
+@app.get("/runs/{run_id}/interaction", response_class=HTMLResponse)
+async def poll_interaction(request: Request, run_id: str) -> Any:
+    """Poll for a manual interaction prompt."""
+    try:
+        interaction = await api_client.get_interaction(run_id)
+        if not interaction:
+            return HTMLResponse(
+                content=f'<div hx-get="/runs/{run_id}/interaction" hx-trigger="every 2s" hx-swap="outerHTML" style="color: var(--base01); font-style: italic;">No pending prompts.</div>'
+            )
+            
+        prompt = interaction.get("prompt", "Please provide input:")
+        return templates.TemplateResponse(
+            request,
+            "interaction_form.html",
+            {"run_id": run_id, "prompt": prompt}
+        )
+    except Exception:
+        log.exception("Failed to poll interaction for %s", run_id)
+        return HTMLResponse(
+            content=f'<div hx-get="/runs/{run_id}/interaction" hx-trigger="every 5s" hx-swap="outerHTML" style="color: var(--red);">Error polling for prompts.</div>'
+        )
+
+@app.post("/runs/{run_id}/interaction", response_class=HTMLResponse)
+async def submit_interaction(request: Request, run_id: str, response: str = Form(...)) -> Any:
+    """Submit a manual interaction response."""
+    try:
+        await api_client.submit_interaction(run_id, {"response": response})
+        return HTMLResponse(
+            content=f'<div hx-get="/runs/{run_id}/interaction" hx-trigger="load" hx-swap="outerHTML" style="color: var(--green);">Response submitted. Waiting for next...</div>'
+        )
+    except Exception as exc:
+        log.exception("Failed to submit interaction for %s", run_id)
+        return HTMLResponse(
+            content=f'<div style="color: var(--red);">Error: {exc}</div>'
+        )
+
+@app.get("/runs/{run_id}/terminal", response_class=HTMLResponse)
+async def interactive_terminal(request: Request, run_id: str) -> Any:
+    """Standalone page for the interactive terminal."""
+    return templates.TemplateResponse(request, "interactive_terminal.html", {"run_id": run_id})

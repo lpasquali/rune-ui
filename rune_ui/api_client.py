@@ -78,6 +78,29 @@ class RuneApiClient:
             )
             return dict(response.json())
 
+    async def get_interaction(self, job_id: str) -> Dict[str, Any]:
+        """Fetch pending manual interaction prompt."""
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{self.base_url}/v1/runs/{job_id}/interaction",
+                headers=self.headers,
+            )
+            if response.status_code == 404:
+                return {}
+            response.raise_for_status()
+            return dict(response.json())
+
+    async def submit_interaction(self, job_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Submit a response to a pending manual interaction."""
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{self.base_url}/v1/runs/{job_id}/interaction",
+                headers=self.headers,
+                json=payload,
+            )
+            response.raise_for_status()
+            return dict(response.json())
+
     async def get_settings(self) -> Dict[str, Any]:
         """Fetch global settings."""
         async with httpx.AsyncClient() as client:
