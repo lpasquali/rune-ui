@@ -7,7 +7,7 @@ RUN groupadd -r rune && useradd -r -g rune -u 1000 rune
 # 2. Dependencies
 WORKDIR /app
 COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip \
+RUN pip install --no-cache-dir pip==26.0 \
  && pip install --no-cache-dir -r requirements.txt
 
 # 3. Application code
