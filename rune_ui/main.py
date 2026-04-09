@@ -283,3 +283,24 @@ async def view_report(request: Request, job_id: str) -> Any:
     except Exception:
         log.exception("Failed to load report %s", job_id)
         return '<div class="card" style="border-color: var(--red)"><h3>Report Error</h3><p>Unable to load report.</p></div>'
+
+
+@app.get("/audits/{run_id}", response_class=HTMLResponse)
+async def get_audits_page(request: Request, run_id: str) -> Any:
+    """Render the audit artifacts shell for a benchmark run (Issue #100).
+
+    The server only emits the shell (template + CSS + JS). The ``audit-viewer.js``
+    module performs the ``GET /v1/audits/{run_id}/artifacts`` fetch client-side
+    using ``RUNE_API_URL`` as the base URL, groups artifacts by ``kind``, and
+    renders a card per artifact with per-kind inline previews (SLSA JSON, SBOM
+    component list, TLA+ pass/fail) plus copy / download controls.
+
+    Unknown runs are handled client-side: the RUNE API returns 404, which the
+    JS catches and displays as an error state. This endpoint therefore always
+    returns 200 — it is a static shell that needs no backend lookup.
+    """
+    return templates.TemplateResponse(
+        request,
+        "audit.html",
+        {"run_id": run_id, "api_base_url": RUNE_API_URL},
+    )
