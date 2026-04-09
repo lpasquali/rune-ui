@@ -146,6 +146,7 @@ def test_stream_run_trace_error(mock_stream) -> None:
     assert response.status_code == 200
     assert b"event: error" in response.content
 
+
 @patch("httpx.AsyncClient.stream")
 def test_stream_browser_view_success(mock_stream) -> None:
     from contextlib import asynccontextmanager
