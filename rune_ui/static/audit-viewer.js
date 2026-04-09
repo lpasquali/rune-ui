@@ -393,7 +393,8 @@
         var summaryEl = document.getElementById("audit-summary");
         var cardsEl = document.getElementById("audit-cards");
 
-        var url = (apiBase ? apiBase.replace(/\/$/, "") : "") + "/v1/audits/" + encodeURIComponent(runId) + "/artifacts";
+        var runPath = String(runId || "").split("/").map(encodeURIComponent).join("/");
+        var url = (apiBase ? apiBase.replace(/\/$/, "") : "") + "/v1/audits/" + runPath + "/artifacts";
 
         fetch(url, { headers: { Accept: "application/json" } })
             .then(function (r) {
