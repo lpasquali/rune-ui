@@ -51,7 +51,7 @@ jobs:
     with:
       path-filter: ".*"
       ollama-enabled: false
-      smoke-python-version: "3.12"
+      smoke-python-version: "3.14"
       # Shared workflow targets rune (Ollama file + wheel smoke on py3.11); rune-ui has neither.
       ollama-enabled: false
       smoke-install-enabled: false
