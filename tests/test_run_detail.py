@@ -84,3 +84,53 @@ def test_stream_run_trace_error(mock_stream) -> None:
     response = client.get("/api/v1/runs/test-123/trace")
     assert response.status_code == 200
     assert b"event: error" in response.content
+
+@patch("httpx.AsyncClient.stream")
+def test_stream_browser_view_success(mock_stream) -> None:
+    from contextlib import asynccontextmanager
+    
+    @asynccontextmanager
+    async def mock_stream_ctx(*args, **kwargs):
+        class MockResponse:
+            status_code = 200
+            async def aiter_bytes(self):
+                yield b"event: screenshot\n"
+                yield b"data: base64img\n\n"
+        yield MockResponse()
+        
+    mock_stream.side_effect = mock_stream_ctx
+    
+    response = client.get("/api/v1/runs/test-123/browser-stream")
+    assert response.status_code == 200
+    assert b"data: base64img" in response.content
+
+@patch("httpx.AsyncClient.stream")
+def test_stream_browser_view_404(mock_stream) -> None:
+    from contextlib import asynccontextmanager
+    
+    @asynccontextmanager
+    async def mock_stream_ctx(*args, **kwargs):
+        class MockResponse:
+            status_code = 404
+        yield MockResponse()
+        
+    mock_stream.side_effect = mock_stream_ctx
+    
+    response = client.get("/api/v1/runs/test-123/browser-stream")
+    assert response.status_code == 200
+    assert b"data: not available" in response.content
+
+@patch("httpx.AsyncClient.stream")
+def test_stream_browser_view_error(mock_stream) -> None:
+    from contextlib import asynccontextmanager
+    
+    @asynccontextmanager
+    async def mock_stream_ctx(*args, **kwargs):
+        raise Exception("Connection failed")
+        yield
+        
+    mock_stream.side_effect = mock_stream_ctx
+    
+    response = client.get("/api/v1/runs/test-123/browser-stream")
+    assert response.status_code == 200
+    assert b"event: error" in response.content
