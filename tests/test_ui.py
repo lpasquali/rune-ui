@@ -1,7 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
+from __future__ import annotations
+
+from typing import Any
 from unittest.mock import AsyncMock, patch
 
-import pytest
 from fastapi.testclient import TestClient
 
 from rune_ui.main import app
@@ -249,7 +251,6 @@ def test_stream_job_logs_cancelled(mock_status: AsyncMock, mock_sleep: AsyncMock
 
 def test_rune_api_url_env_fallback() -> None:
     """RUNE_API_URL should fall back to RUNE_API_BASE_URL if the former is not set."""
-    import importlib
     import os
 
     old_url = os.environ.pop("RUNE_API_URL", None)
@@ -347,9 +348,9 @@ def test_api_client_get_vastai_models() -> None:
     asyncio.run(_run())
 
 
-def _make_httpx_mock(json_data: dict) -> "tuple[Any, Any]":
-    """Helper: returns (mock_async_client, patch_target)."""
-    from unittest.mock import MagicMock, patch
+def _make_httpx_mock(json_data: dict) -> tuple[Any, Any]:
+    """Helper: returns (mock_async_client, mock_response)."""
+    from unittest.mock import MagicMock
 
     mock_response = MagicMock()
     mock_response.json.return_value = json_data
@@ -643,6 +644,92 @@ def test_print_css_serves_successfully() -> None:
     response = client.get("/static/print.css")
     assert response.status_code == 200
     assert "@media print" in response.text
+
+
+# ── Issue #100: audit artifacts page ────────────────────────────────────────
+
+
+def test_audits_page_returns_200() -> None:
+    """GET /audits/{run_id} returns 200 with the audit shell for any run_id.
+
+    The server renders a static shell; the client JS performs the backend fetch
+    and handles 404 / empty state on its own, so this endpoint always returns 200.
+    """
+    response = client.get("/audits/run-42")
+    assert response.status_code == 200
+    assert "Audit Artifacts" in response.text
+    assert "run-42" in response.text
+
+
+def test_audits_page_includes_container_and_script() -> None:
+    """The audit shell must include the container, card template, CSS, and JS."""
+    response = client.get("/audits/abc-123")
+    assert response.status_code == 200
+    body = response.text
+    # Container holds the run_id and API base URL so JS can fetch artifacts.
+    assert 'id="audit-shell"' in body
+    assert 'data-run-id="abc-123"' in body
+    assert 'data-api-url=' in body
+    assert 'id="audit-cards"' in body
+    assert 'id="audit-status"' in body
+    # Card <template> element (vanilla JS cloneNode target).
+    assert 'id="audit-card-template"' in body
+    # Stylesheet + script are wired up.
+    assert "/static/audit-viewer.css" in body
+    assert "/static/audit-viewer.js" in body
+    # Empty-state copy is present in the JS for unknown runs.
+    # (Verified via the static asset test below, not duplicated here.)
+
+
+def test_audits_page_unknown_run_handles_404() -> None:
+    """Unknown runs still get a valid shell — the JS shows the error state.
+
+    The server does not pre-fetch artifacts, so any run_id returns 200 and
+    the client-side fetch surfaces the upstream 404 as an error banner.
+    """
+    response = client.get("/audits/definitely-does-not-exist")
+    assert response.status_code == 200
+    # The shell contains the placeholder status element that JS populates on 404.
+    assert "audit-status" in response.text
+    assert "definitely-does-not-exist" in response.text
+
+
+def test_audit_viewer_js_static_serves_200() -> None:
+    """GET /static/audit-viewer.js must return 200 and include render helpers.
+
+    Covers the core pieces wired up from audit.html so a broken build is caught.
+    """
+    response = client.get("/static/audit-viewer.js")
+    assert response.status_code == 200
+    js = response.text
+    # Kind labels, empty-state copy, fetch URL template, and the preview renderers.
+    assert "slsa_provenance" in js
+    assert "No audit artifacts collected for this run yet." in js
+    assert "/v1/audits/" in js
+    assert "renderSlsaPreview" in js
+    assert "renderSbomPreview" in js
+    assert "renderTlaPreview" in js
+    assert "humanSize" in js
+
+
+def test_audit_viewer_css_static_serves_200() -> None:
+    """GET /static/audit-viewer.css must return 200 with Solarized tokens + print rules."""
+    response = client.get("/static/audit-viewer.css")
+    assert response.status_code == 200
+    css = response.text
+    # Solarized tokens used for each kind badge.
+    assert "var(--violet)" in css  # slsa_provenance
+    assert "var(--cyan)" in css  # sbom
+    assert "var(--green)" in css  # tla_report
+    assert "var(--magenta)" in css  # sigstore_bundle
+    assert "var(--blue)" in css  # rekor_entry
+    assert "var(--orange)" in css  # tpm_attestation
+    # Print stylesheet must hide interactive controls.
+    assert "@media print" in css
+    idx = css.find("@media print")
+    print_block = css[idx:]
+    for selector in (".audit-copy-btn", ".audit-preview-toggle", ".audit-download-btn"):
+        assert selector in print_block, f"{selector} not hidden in @media print block"
 
 
 # ── Issue #99: /chains/{run_id} DAG page ─────────────────────────────────────
