@@ -9,8 +9,9 @@ import logging
 import os
 from pathlib import Path
 import secrets
-from typing import Any, AsyncGenerator
+from typing import Any, AsyncGenerator, Optional
 
+import httpx
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -306,6 +307,48 @@ async def get_reports_page(request: Request) -> Any:
         return '<div class="card" style="border-color: var(--red)"><h3>Reports Error</h3><p>Unable to load reports.</p></div>'
 
 
+@app.get("/chains/{run_id}", response_class=HTMLResponse)
+async def get_chain_page(request: Request, run_id: str) -> Any:
+    """Render the multi-agent chain DAG page for `run_id` (Issue #99).
+
+    Server-side rendering is an empty SVG shell; the client JS fetches state
+    from `GET /v1/chains/{run_id}/state` and updates the DOM. We pre-fetch the
+    initial state here so the page still renders useful content (and the right
+    HTTP status) on the first load — 404 if the run is unknown, 502 if the
+    backend is unreachable.
+    """
+    initial_state: Any = None
+    error_message: Optional[str] = None
+    status_code = 200
+    try:
+        initial_state = await api_client.get_chain_state(run_id)
+    except httpx.HTTPStatusError as exc:
+        # Pass through 404 (and other 4xx) from the backend to the client.
+        upstream = exc.response.status_code
+        status_code = upstream if upstream in (404, 400, 403) else 502
+        if upstream == 404:
+            error_message = f"Chain run '{run_id}' not found."
+        else:
+            error_message = f"Upstream error {upstream} fetching chain state."
+    except Exception as exc:
+        log.exception("Failed to fetch chain state for %s", run_id)
+        status_code = 502
+        error_message = f"Unable to reach RUNE API at {RUNE_API_URL}: {exc}"
+
+    return templates.TemplateResponse(
+        request,
+        "chain.html",
+        {
+            "run_id": run_id,
+            "initial_state": initial_state,
+            "initial_state_json": json.dumps(initial_state) if initial_state else "null",
+            "error_message": error_message,
+            "rune_api_url": RUNE_API_URL,
+        },
+        status_code=status_code,
+    )
+
+
 @app.get("/reports/{job_id}", response_class=HTMLResponse)
 async def view_report(request: Request, job_id: str) -> Any:
     """BFF logic to fetch and display a specific historical report."""
@@ -316,6 +359,27 @@ async def view_report(request: Request, job_id: str) -> Any:
         log.exception("Failed to load report %s", job_id)
         return '<div class="card" style="border-color: var(--red)"><h3>Report Error</h3><p>Unable to load report.</p></div>'
 
+@app.get("/audits/{run_id}", response_class=HTMLResponse)
+async def get_audits_page(request: Request, run_id: str) -> Any:
+    """Render the audit artifacts shell for a benchmark run (Issue #100).
+
+    The server only emits the shell (template + CSS + JS). The ``audit-viewer.js``
+    module performs the ``GET /v1/audits/{run_id}/artifacts`` fetch client-side
+    using ``RUNE_API_URL`` as the base URL, groups artifacts by ``kind``, and
+    renders a card per artifact with per-kind inline previews (SLSA JSON, SBOM
+    component list, TLA+ pass/fail) plus copy / download controls.
+
+    Unknown runs are handled client-side: the RUNE API returns 404, which the
+    JS catches and displays as an error state. This endpoint therefore always
+    returns 200 — it is a static shell that needs no backend lookup.
+    """
+    return templates.TemplateResponse(
+        request,
+        "audit.html",
+        {"run_id": run_id, "api_base_url": RUNE_API_URL},
+    )
+
+
 @app.get("/runs/{run_id}/interaction", response_class=HTMLResponse)
 async def poll_interaction(request: Request, run_id: str) -> Any:
     """Poll for a manual interaction prompt."""
@@ -323,20 +387,28 @@ async def poll_interaction(request: Request, run_id: str) -> Any:
         interaction = await api_client.get_interaction(run_id)
         if not interaction:
             return HTMLResponse(
-                content=f'<div hx-get="/runs/{run_id}/interaction" hx-trigger="every 2s" hx-swap="outerHTML" style="color: var(--base01); font-style: italic;">No pending prompts.</div>'
+                content=(
+                    f'<div hx-get="/runs/{run_id}/interaction" hx-trigger="every 2s" '
+                    f'hx-swap="outerHTML" style="color: var(--base01); font-style: italic;">'
+                    f"No pending prompts.</div>"
+                )
             )
-            
+
         prompt = interaction.get("prompt", "Please provide input:")
         return templates.TemplateResponse(
             request,
             "interaction_form.html",
-            {"run_id": run_id, "prompt": prompt}
+            {"run_id": run_id, "prompt": prompt},
         )
     except Exception:
         log.exception("Failed to poll interaction for %s", run_id)
         return HTMLResponse(
-            content=f'<div hx-get="/runs/{run_id}/interaction" hx-trigger="every 5s" hx-swap="outerHTML" style="color: var(--red);">Error polling for prompts.</div>'
+            content=(
+                f'<div hx-get="/runs/{run_id}/interaction" hx-trigger="every 5s" '
+                f'hx-swap="outerHTML" style="color: var(--red);">Error polling for prompts.</div>'
+            )
         )
+
 
 @app.post("/runs/{run_id}/interaction", response_class=HTMLResponse)
 async def submit_interaction(request: Request, run_id: str, response: str = Form(...)) -> Any:
@@ -344,13 +416,16 @@ async def submit_interaction(request: Request, run_id: str, response: str = Form
     try:
         await api_client.submit_interaction(run_id, {"response": response})
         return HTMLResponse(
-            content=f'<div hx-get="/runs/{run_id}/interaction" hx-trigger="load" hx-swap="outerHTML" style="color: var(--green);">Response submitted. Waiting for next...</div>'
+            content=(
+                f'<div hx-get="/runs/{run_id}/interaction" hx-trigger="load" '
+                f'hx-swap="outerHTML" style="color: var(--green);">'
+                f"Response submitted. Waiting for next...</div>"
+            )
         )
     except Exception as exc:
         log.exception("Failed to submit interaction for %s", run_id)
-        return HTMLResponse(
-            content=f'<div style="color: var(--red);">Error: {exc}</div>'
-        )
+        return HTMLResponse(content=f'<div style="color: var(--red);">Error: {exc}</div>')
+
 
 @app.get("/runs/{run_id}/terminal", response_class=HTMLResponse)
 async def interactive_terminal(request: Request, run_id: str) -> Any:

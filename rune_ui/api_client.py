@@ -78,6 +78,22 @@ class RuneApiClient:
             )
             return dict(response.json())
 
+    async def get_chain_state(self, run_id: str) -> Dict[str, Any]:
+        """Fetch DAG state for a multi-agent chain run (Issue #99).
+
+        Returns the full state document `{run_id, nodes[], edges[], overall_status}`
+        served by `GET /v1/chains/{run_id}/state`. Raises `httpx.HTTPStatusError`
+        on non-2xx responses so callers can distinguish 404 (unknown run) from
+        transport errors.
+        """
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{self.base_url}/v1/chains/{run_id}/state",
+                headers=self.headers,
+            )
+            response.raise_for_status()
+            return dict(response.json())
+
     async def get_interaction(self, job_id: str) -> Dict[str, Any]:
         """Fetch pending manual interaction prompt."""
         async with httpx.AsyncClient() as client:
