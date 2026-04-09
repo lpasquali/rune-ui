@@ -71,7 +71,8 @@
     <script id="chain-initial-state" type="application/json">{{ initial_state_json|safe }}</script>
     <script>
         window.RUNE_CHAIN_RUN_ID = {{ run_id|tojson }};
-        window.RUNE_CHAIN_STATE_URL = "/v1/chains/" + encodeURIComponent(window.RUNE_CHAIN_RUN_ID) + "/state";
+        window.RUNE_CHAIN_STATE_URL = "/v1/chains/" + String(window.RUNE_CHAIN_RUN_ID)
+            .split("/").map(function (p) { return encodeURIComponent(p); }).join("/") + "/state";
     </script>
     <script src="/static/chain-dag.js"></script>
 </body>
