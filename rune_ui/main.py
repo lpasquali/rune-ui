@@ -124,6 +124,11 @@ async def get_benchmarks_page(request: Request) -> Any:
 @app.post("/benchmarks/estimate", response_class=HTMLResponse)
 async def get_benchmark_estimate(
     request: Request,
+    kind: str = Form("benchmark"),
+    agent: str = Form("sre:k8sgpt"),
+    question: str = Form("What is unhealthy in this Kubernetes cluster?"),
+    backend_type: str = Form("ollama"),
+    backend_url: str = Form(""),
     model: str = Form(...),
     vastai: bool = Form(False),
     max_dph: float = Form(0.0),
@@ -145,7 +150,18 @@ async def get_benchmark_estimate(
         return templates.TemplateResponse(
             request,
             "estimate_modal.html",
-            {"estimate": estimate, "model": model, "vastai": vastai, "max_dph": max_dph},
+            {
+                "estimate": estimate, 
+                "kind": kind,
+                "agent": agent,
+                "question": question,
+                "backend_type": backend_type,
+                "backend_url": backend_url,
+                "model": model, 
+                "vastai": vastai, 
+                "max_dph": max_dph,
+                "local_hardware": local_hardware
+            },
         )
     except Exception as exc:
         log.exception("Estimation failed")
@@ -165,6 +181,11 @@ async def get_benchmark_estimate(
 @app.post("/api/jobs/submit", response_class=HTMLResponse)
 async def submit_benchmark_job(
     request: Request,
+    kind: str = Form("benchmark"),
+    agent: str = Form("sre:k8sgpt"),
+    question: str = Form("What is unhealthy in this Kubernetes cluster?"),
+    backend_type: str = Form("ollama"),
+    backend_url: str = Form(""),
     model: str = Form(...),
     vastai: bool = Form(False),
     max_dph: float = Form(0.0),
@@ -177,16 +198,20 @@ async def submit_benchmark_job(
         "template_hash": os.environ.get("RUNE_VASTAI_TEMPLATE", "c166c11f035d3a97871a23bd32ca6aba"),
         "min_dph": 0.0,
         "reliability": 0.99,
-        "question": "What is unhealthy in this Kubernetes cluster?",
-        "ollama_warmup": True,
-        "ollama_warmup_timeout": 300,
+        "question": question,
+        "backend_warmup": True,
+        "backend_warmup_timeout": 300,
         "kubeconfig": os.environ.get("RUNE_KUBECONFIG", "~/.kube/config"),
         "vastai_stop_instance": True,
-        "ollama_url": None,
+        "backend_url": backend_url if backend_url else None,
+        "backend_type": backend_type,
     }
+    
+    if kind == "agentic-agent":
+        payload["agent"] = agent
 
     try:
-        job_info = await api_client.submit_job("benchmark", payload)
+        job_info = await api_client.submit_job(kind, payload)
         job_id = job_info.get("job_id")
         return templates.TemplateResponse(request, "job_tracker.html", {"job_id": job_id})
     except Exception:
