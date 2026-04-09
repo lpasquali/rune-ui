@@ -3,7 +3,7 @@
     <p>Manual intervention transport for agent communication.</p>
 
     <div style="margin-top: 20px; background: var(--base02); padding: 20px; border-radius: 4px; border: 1px solid var(--base01); min-height: 200px;">
-        <div hx-get="/runs/{{ run_id }}/interaction" hx-trigger="load, every 2s" hx-swap="outerHTML">
+        <div hx-get="/runs/{{ run_id_path }}/interaction" hx-trigger="load, every 2s" hx-swap="outerHTML">
             <span style="color: var(--base01); font-style: italic;">Connecting to session...</span>
         </div>
     </div>

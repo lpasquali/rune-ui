@@ -18,8 +18,12 @@
 
     <p style="color: var(--base1)">Scale: ☕ <strong>Coffee</strong> (Low) &rarr; 🏎️ <strong>Industrial</strong> (High)</p>
     
-    <!-- Benchmark execution is blocked until this form is explicitly submitted (Issue #10). -->
     <form hx-post="/api/jobs/submit" hx-target="#main" style="display: inline;">
+        <input type="hidden" name="kind" value="{{ kind }}">
+        <input type="hidden" name="agent" value="{{ agent }}">
+        <input type="hidden" name="question" value="{{ question }}">
+        <input type="hidden" name="backend_type" value="{{ backend_type }}">
+        <input type="hidden" name="backend_url" value="{{ backend_url }}">
         <input type="hidden" name="model" value="{{ model }}">
         <input type="hidden" name="vastai" value="{{ 'true' if vastai else 'false' }}">
         <input type="hidden" name="max_dph" value="{{ max_dph }}">

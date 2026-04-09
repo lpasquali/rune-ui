@@ -2,7 +2,7 @@
     <h3 style="color: var(--cyan);">Agent Request</h3>
     <pre style="background: var(--base03); padding: 10px; color: var(--base0); border-radius: 4px; white-space: pre-wrap;">{{ prompt }}</pre>
     
-    <form hx-post="/runs/{{ run_id }}/interaction" hx-swap="outerHTML">
+    <form hx-post="/runs/{{ run_id_path }}/interaction" hx-swap="outerHTML">
         <label for="response" style="color: var(--base1);">Your Response:</label><br>
         <textarea id="response" name="response" rows="4" style="width: 100%; margin-top: 10px; margin-bottom: 10px; background: var(--base03); color: var(--base0); border: 1px solid var(--base01); padding: 8px;" required></textarea><br>
         <button type="submit" style="background: var(--green); color: var(--base03); border: none; font-weight: bold;">SUBMIT RESPONSE</button>
