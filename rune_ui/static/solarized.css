@@ -16,6 +16,15 @@
     --blue: #268bd2;
     --cyan: #2aa198;
     --green: #859900;
+    
+    /* Chart Colors */
+    --chart-indigo: #6366f1;
+    --chart-violet: #8b5cf6;
+    --chart-purple: #a78bfa;
+    --chart-lavender: #c4b5fd;
+    --status-passed: #34d399; /* emerald-400 */
+    --status-warning: #fbbf24; /* amber-400 */
+    --status-failed: #fb7185; /* rose-400 */
 }
 
 body {
