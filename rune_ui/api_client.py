@@ -77,3 +77,32 @@ class RuneApiClient:
                 headers=self.headers,
             )
             return dict(response.json())
+
+    async def get_settings(self) -> Dict[str, Any]:
+        """Fetch global settings."""
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{self.base_url}/v1/settings",
+                headers=self.headers,
+            )
+            return dict(response.json())
+
+    async def update_settings(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Update global settings."""
+        async with httpx.AsyncClient() as client:
+            response = await client.put(
+                f"{self.base_url}/v1/settings",
+                headers=self.headers,
+                json=payload,
+            )
+            return dict(response.json())
+
+    async def create_profile(self, name: str, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a new profile."""
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{self.base_url}/v1/settings/profiles",
+                headers=self.headers,
+                json={"name": name, "config": config},
+            )
+            return dict(response.json())

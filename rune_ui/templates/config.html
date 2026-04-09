@@ -1,65 +1,108 @@
 <div class="card">
-    <h2>Configuration</h2>
-    <p>Read-only view of the current RUNE environment settings.</p>
+    <h2 style="color: var(--blue);">Global Settings Dashboard</h2>
+    <p>Manage RUNE environment settings and profiles.</p>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Setting</th>
-                <th>Value</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>API URL</td>
-                <td><code>{{ api_url }}</code></td>
-            </tr>
-            <tr>
-                <td>API Status</td>
-                <td>
-                    {% if api_online %}
-                    <span style="color: var(--green)">ONLINE</span>
-                    {% else %}
-                    <span style="color: var(--yellow)">NOT CONNECTED</span>
-                    {% endif %}
-                </td>
-            </tr>
-            <tr>
-                <td>Authentication</td>
-                <td>
-                    {% if auth_disabled %}
-                    <span style="color: var(--yellow)">DISABLED</span>
-                    {% else %}
-                    <span style="color: var(--green)">ENABLED</span>
-                    {% endif %}
-                </td>
-            </tr>
-            <tr>
-                <td>Tenant</td>
-                <td><code>{{ tenant }}</code></td>
-            </tr>
-        </tbody>
-    </table>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div>
+            <h3 style="color: var(--cyan);">System Status</h3>
+            <table style="width: 100%;">
+                <tbody>
+                    <tr>
+                        <td>API URL</td>
+                        <td><code>{{ api_url }}</code></td>
+                    </tr>
+                    <tr>
+                        <td>API Status</td>
+                        <td>
+                            {% if api_online %}
+                            <span style="color: var(--green); font-weight: bold;">ONLINE</span>
+                            {% else %}
+                            <span style="color: var(--yellow); font-weight: bold;">NOT CONNECTED</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Authentication</td>
+                        <td>
+                            {% if auth_disabled %}
+                            <span style="color: var(--yellow);">DISABLED</span>
+                            {% else %}
+                            <span style="color: var(--green);">ENABLED</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Tenant</td>
+                        <td><code>{{ tenant }}</code></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div>
+            <h3 style="color: var(--cyan);">Configuration Profiles</h3>
+            {% if settings %}
+            <form hx-post="/config/profile" hx-target="#config-feedback" hx-swap="innerHTML" style="margin-bottom: 20px;">
+                <label for="profile_select">Active Profile:</label>
+                <select id="profile_select" name="profile" style="width: 70%; padding: 8px; background: var(--base03); color: var(--base0); border: 1px solid var(--base01);">
+                    {% for p in settings.get('profiles', []) %}
+                        <option value="{{ p }}" {% if p == settings.get('active_profile') %}selected{% endif %}>{{ p }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" style="padding: 8px;">Switch</button>
+            </form>
+
+            <form hx-post="/config/new_profile" hx-target="#config-feedback" hx-swap="innerHTML">
+                <label for="new_profile_name">New Profile Name:</label>
+                <input type="text" id="new_profile_name" name="name" required style="width: 70%; padding: 8px; background: var(--base03); color: var(--base0); border: 1px solid var(--base01);">
+                <button type="submit" style="padding: 8px;">Create</button>
+            </form>
+            {% else %}
+            <p style="color: var(--yellow);">Settings not available. Backend may be offline.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div id="config-feedback" style="margin-top: 20px;"></div>
 </div>
 
+{% if settings %}
 <div class="card" style="margin-top: 20px;">
-    <h3>Available Models</h3>
+    <h3 style="color: var(--cyan);">Edit Active Profile ({{ settings.get('active_profile', 'Unknown') }})</h3>
+    <form hx-post="/config/update" hx-target="#config-feedback" hx-swap="innerHTML">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
+            <div>
+                <label for="backend_type">Backend Provider:</label>
+                <select id="backend_type" name="backend_type" style="width: 100%; padding: 8px; background: var(--base03); color: var(--base0); border: 1px solid var(--base01);">
+                    <option value="ollama" {% if settings.get('config', {}).get('backend_type') == 'ollama' %}selected{% endif %}>Ollama</option>
+                    <option value="openai" {% if settings.get('config', {}).get('backend_type') == 'openai' %}selected{% endif %}>OpenAI</option>
+                </select>
+            </div>
+            <div>
+                <label for="model">Default Model:</label>
+                <input type="text" id="model" name="model" value="{{ settings.get('config', {}).get('model', '') }}" style="width: 100%; padding: 8px; background: var(--base03); color: var(--base0); border: 1px solid var(--base01);">
+            </div>
+        </div>
+        
+        <label for="backend_url">Backend URL:</label>
+        <input type="text" id="backend_url" name="backend_url" value="{{ settings.get('config', {}).get('backend_url', '') }}" style="width: 100%; padding: 8px; margin-bottom: 15px; background: var(--base03); color: var(--base0); border: 1px solid var(--base01);">
+
+        <button type="submit" style="width: 100%; padding: 15px; font-weight: bold; background: var(--green); color: var(--base03); border: none; cursor: pointer;">SAVE SETTINGS</button>
+    </form>
+</div>
+{% endif %}
+
+<div class="card" style="margin-top: 20px;">
+    <h3>Available Models (Vast.ai)</h3>
     {% if models %}
-    <table>
-        <thead>
-            <tr>
-                <th>Model</th>
-            </tr>
-        </thead>
-        <tbody>
+    <div style="max-height: 200px; overflow-y: auto; background: var(--base03); padding: 10px; border: 1px solid var(--base01);">
+        <ul style="list-style: none; padding: 0; margin: 0;">
             {% for model in models %}
-            <tr>
-                <td><code>{{ model }}</code></td>
-            </tr>
+            <li style="padding: 5px; border-bottom: 1px solid var(--base02);"><code>{{ model }}</code></li>
             {% endfor %}
-        </tbody>
-    </table>
+        </ul>
+    </div>
     {% else %}
-    <p style="color: var(--base01)"><em>No models available. The API may be offline or the catalog is empty.</em></p>
+    <p style="color: var(--base01)"><em>No models available. The catalog may be empty.</em></p>
     {% endif %}
 </div>
