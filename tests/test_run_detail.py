@@ -1,4 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
+from urllib.parse import quote
+
 from unittest.mock import AsyncMock, patch
 from fastapi.testclient import TestClient
 from rune_ui.main import app
@@ -51,6 +53,29 @@ def test_run_status_polling_error(mock_get_status: AsyncMock) -> None:
     response = client.get("/runs/test-123/status")
     assert response.status_code == 200
     assert "error" in response.text
+
+
+@patch("rune_ui.api_client.RuneApiClient.get_job_status", new_callable=AsyncMock)
+def test_run_status_escapes_reflected_status(mock_get_status: AsyncMock) -> None:
+    mock_get_status.return_value = {
+        "status": 'running<img src=x onerror=alert(1)>',
+    }
+    response = client.get("/runs/test-123/status")
+    assert response.status_code == 200
+    assert "<img " not in response.text
+    assert "&lt;img" in response.text
+
+
+@patch("rune_ui.api_client.RuneApiClient.get_job_status", new_callable=AsyncMock)
+def test_run_status_escapes_run_id_in_poll_url(mock_get_status: AsyncMock) -> None:
+    """Run IDs with '/' are ambiguous in paths; this covers quote + attr safety."""
+    mock_get_status.return_value = {"status": "running"}
+    run_id = 'x"><img src=x onerror=1'
+    path = f"/runs/{quote(run_id, safe='')}/status"
+    response = client.get(path)
+    assert response.status_code == 200
+    encoded = quote(run_id, safe="")
+    assert f'hx-get="/runs/{encoded}/status"' in response.text
 
 @patch("httpx.AsyncClient.stream")
 def test_stream_run_trace_success(mock_stream) -> None:
