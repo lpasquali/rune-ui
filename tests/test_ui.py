@@ -48,7 +48,7 @@ def test_api_status_not_connected_exception(mock_health: AsyncMock) -> None:
 def test_benchmarks_page() -> None:
     response = client.get("/benchmarks")
     assert response.status_code == 200
-    assert "Run Benchmark" in response.text
+    assert "New Benchmark Wizard" in response.text
 
 
 @patch("rune_ui.api_client.RuneApiClient.get_estimate", new_callable=AsyncMock)
