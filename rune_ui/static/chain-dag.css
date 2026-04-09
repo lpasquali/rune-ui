@@ -1,0 +1,214 @@
+/* Chain DAG styles (Issue #99) — Solarized tokens only, vanilla SVG. */
+
+.chain-main {
+    display: block;
+    padding: 0;
+}
+
+.chain-meta {
+    margin-bottom: 20px;
+}
+
+.chain-meta h2 {
+    margin-top: 0;
+}
+
+.chain-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 20px;
+}
+
+@media (max-width: 900px) {
+    .chain-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+.chain-controls {
+    display: inline-flex;
+    gap: 10px;
+    align-items: center;
+    margin-left: 20px;
+}
+
+.chain-nav-link {
+    color: var(--green);
+    text-decoration: none;
+    border: 1px solid var(--base01);
+    padding: 6px 12px;
+    font-family: inherit;
+}
+
+.chain-nav-link:hover {
+    background: var(--base02);
+}
+
+.chain-canvas-card {
+    padding: 10px;
+    overflow: auto;
+}
+
+.chain-dag-container {
+    min-height: 320px;
+    position: relative;
+}
+
+#chain-dag-svg {
+    display: block;
+    background: var(--base03);
+    border: 1px solid var(--base02);
+    min-height: 320px;
+}
+
+/* Node rectangles */
+.chain-node {
+    cursor: pointer;
+    transition: transform 80ms ease-out;
+}
+
+.chain-node:hover .chain-node-rect {
+    stroke: var(--cyan);
+    stroke-width: 2.5;
+}
+
+.chain-node-rect {
+    fill: var(--base02);
+    stroke: var(--base01);
+    stroke-width: 1.5;
+    rx: 6;
+    ry: 6;
+}
+
+.chain-node-label {
+    fill: var(--base1);
+    font-family: 'Fira Code', 'Courier New', Courier, monospace;
+    font-size: 13px;
+    pointer-events: none;
+}
+
+.chain-node-sub {
+    fill: var(--base0);
+    font-family: 'Fira Code', 'Courier New', Courier, monospace;
+    font-size: 11px;
+    pointer-events: none;
+}
+
+/* Status colors — applied via data-status attribute. */
+.chain-node[data-status="pending"] .chain-node-rect { stroke: var(--base01); }
+.chain-node[data-status="success"] .chain-node-rect { stroke: var(--green); }
+.chain-node[data-status="failed"] .chain-node-rect { stroke: var(--red); }
+.chain-node[data-status="skipped"] .chain-node-rect { stroke: var(--base1); stroke-dasharray: 4 3; }
+
+.chain-node[data-status="running"] .chain-node-rect {
+    stroke: var(--blue);
+    stroke-width: 2.5;
+    animation: chain-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes chain-pulse {
+    0%, 100% { opacity: 0.55; }
+    50% { opacity: 1; }
+}
+
+/* Selected node highlight. */
+.chain-node.selected .chain-node-rect {
+    stroke: var(--yellow);
+    stroke-width: 3;
+}
+
+/* Edges */
+.chain-edge {
+    fill: none;
+    stroke: var(--base01);
+    stroke-width: 1.5;
+    marker-end: url(#arrow-head);
+}
+
+/* Overall status badge */
+.status-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border: 1px solid currentColor;
+    border-radius: 3px;
+    font-weight: bold;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    font-size: 0.85em;
+}
+.status-pending { color: var(--base01); }
+.status-running { color: var(--blue); animation: chain-pulse 1.4s ease-in-out infinite; }
+.status-success { color: var(--green); }
+.status-failed  { color: var(--red); }
+.status-skipped { color: var(--base1); }
+
+/* Side panel */
+.chain-side-panel {
+    min-height: 240px;
+}
+
+.chain-side-panel h3 {
+    margin-top: 0;
+    color: var(--cyan);
+}
+
+.chain-node-details {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 10px;
+    row-gap: 6px;
+    margin: 0;
+}
+.chain-node-details dt { color: var(--base1); font-weight: bold; }
+.chain-node-details dd { margin: 0; color: var(--base0); word-break: break-word; }
+
+.chain-hint {
+    color: var(--base01);
+    font-style: italic;
+}
+
+.chain-error {
+    margin-top: 10px;
+}
+
+/* Print stylesheet: hide interactive chain controls and side panel.
+   Keep the SVG visible so audit reports can include the DAG. */
+@media print {
+    #chain-refresh-btn,
+    #chain-poll-toggle,
+    #chain-panel-close,
+    .chain-nav-link,
+    .chain-controls,
+    .chain-side-panel {
+        display: none !important;
+    }
+
+    .chain-layout {
+        grid-template-columns: 1fr !important;
+    }
+
+    #chain-dag-svg {
+        background: #fff !important;
+        border: 1px solid #000 !important;
+    }
+
+    .chain-node-rect {
+        fill: #fff !important;
+        stroke: #000 !important;
+    }
+
+    .chain-node-label,
+    .chain-node-sub {
+        fill: #000 !important;
+    }
+
+    .chain-edge {
+        stroke: #000 !important;
+    }
+
+    /* Disable animations in print. */
+    .chain-node[data-status="running"] .chain-node-rect,
+    .status-running {
+        animation: none !important;
+    }
+}
