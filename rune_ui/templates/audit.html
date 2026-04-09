@@ -1,0 +1,37 @@
+<link rel="stylesheet" href="/static/audit-viewer.css">
+<div class="card" id="audit-shell" data-run-id="{{ run_id }}" data-api-url="{{ api_base_url }}">
+    <h2>Audit Artifacts <small style="color: var(--base01)">// run {{ run_id }}</small></h2>
+    <p class="audit-subtitle">Compliance evidence collected for this benchmark run (SLSA, SBOM, TLA+, Sigstore, Rekor, TPM).</p>
+
+    <div id="audit-status" class="audit-status" role="status" aria-live="polite">Loading audit artifacts&hellip;</div>
+
+    <div id="audit-summary" class="audit-summary" hidden></div>
+
+    <div id="audit-cards" class="audit-cards" aria-label="Audit artifact cards"></div>
+
+    <template id="audit-card-template">
+        <article class="audit-card" data-kind="">
+            <header class="audit-card-header">
+                <span class="audit-kind-badge" data-field="kind-badge"></span>
+                <h3 class="audit-card-name" data-field="name"></h3>
+            </header>
+            <dl class="audit-card-meta">
+                <dt>Size</dt>
+                <dd data-field="size"></dd>
+                <dt>SHA-256</dt>
+                <dd class="audit-sha">
+                    <code data-field="sha-short"></code>
+                    <button type="button" class="audit-copy-btn" data-action="copy-sha" title="Copy full SHA-256">Copy</button>
+                    <span class="audit-sha-full" data-field="sha-full" hidden></span>
+                </dd>
+                <dt>Created</dt>
+                <dd data-field="created"></dd>
+            </dl>
+            <div class="audit-card-preview" data-field="preview" hidden></div>
+            <footer class="audit-card-footer">
+                <a class="audit-download-btn" data-field="download" download>Download</a>
+            </footer>
+        </article>
+    </template>
+</div>
+<script src="/static/audit-viewer.js" defer></script>
