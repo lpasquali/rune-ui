@@ -324,6 +324,12 @@ async def get_config(request: Request) -> Any:
         models = catalog.get("models", [])
     except Exception:
         pass
+        
+    settings = {}
+    try:
+        settings = await api_client.get_settings()
+    except Exception:
+        log.exception("Failed to fetch global settings")
 
     return templates.TemplateResponse(
         request,
@@ -334,8 +340,34 @@ async def get_config(request: Request) -> Any:
             "auth_disabled": auth_disabled,
             "tenant": tenant,
             "models": models,
+            "settings": settings,
         },
     )
+
+@app.post("/config/profile", response_class=HTMLResponse)
+async def switch_profile(request: Request, profile: str = Form(...)) -> Any:
+    try:
+        await api_client.update_settings({"active_profile": profile})
+        return HTMLResponse('<div class="card" style="border-color: var(--green)"><p>Profile switched successfully.</p><button hx-get="/config" hx-target="#main">Refresh</button></div>')
+    except Exception as e:
+        return HTMLResponse(f'<div class="card" style="border-color: var(--red)"><p>Error: {e}</p></div>')
+
+@app.post("/config/update", response_class=HTMLResponse)
+async def update_config(request: Request, backend_type: str = Form(...), backend_url: str = Form(""), model: str = Form(...)) -> Any:
+    try:
+        payload = {"config": {"backend_type": backend_type, "backend_url": backend_url, "model": model}}
+        await api_client.update_settings(payload)
+        return HTMLResponse('<div class="card" style="border-color: var(--green)"><p>Settings updated successfully.</p><button hx-get="/config" hx-target="#main">Refresh</button></div>')
+    except Exception as e:
+        return HTMLResponse(f'<div class="card" style="border-color: var(--red)"><p>Error: {e}</p></div>')
+
+@app.post("/config/new_profile", response_class=HTMLResponse)
+async def create_new_profile(request: Request, name: str = Form(...)) -> Any:
+    try:
+        await api_client.create_profile(name, {})
+        return HTMLResponse('<div class="card" style="border-color: var(--green)"><p>Profile created successfully.</p><button hx-get="/config" hx-target="#main">Refresh</button></div>')
+    except Exception as e:
+        return HTMLResponse(f'<div class="card" style="border-color: var(--red)"><p>Error: {e}</p></div>')
 
 
 @app.get("/reports", response_class=HTMLResponse)
