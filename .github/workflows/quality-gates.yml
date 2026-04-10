@@ -67,7 +67,7 @@ jobs:
     uses: lpasquali/rune-ci/.github/workflows/pr-compliance.yml@14fe4ea7bd322f1e2c8ec59fc2d733527e905d2e # main
     with:
       needs-json: ${{ toJson(needs) }}
-      merge-gate-excludes: "python,integration,container,security" # Force pass for now to unblock
+      merge-gate-excludes: "integration,container,security"
 
   merge-gate:
     name: Merge Gate
