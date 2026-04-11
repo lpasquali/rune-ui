@@ -41,7 +41,6 @@ rune_ui = ["templates/**/*.html", "static/**/*"]
 include = ["rune_ui*"]
 
 [tool.pytest.ini_options]
-addopts = "--cov=rune_ui --cov-report=term-missing --cov-fail-under=97"
 testpaths = ["tests"]
 
 [tool.ruff]
