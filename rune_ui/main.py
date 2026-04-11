@@ -537,7 +537,7 @@ async def get_interaction(request: Request, run_id: str) -> Any:
         prompt = interaction.get("prompt", "")
         return templates.TemplateResponse(
             request,
-            "interaction.html",
+            "interaction_form.html",
             {
                 "run_id": run_id,
                 "prompt": prompt,
@@ -564,7 +564,7 @@ async def get_interactive_terminal(request: Request, run_id: str) -> Any:
     """Display the interactive terminal page for a run."""
     return templates.TemplateResponse(
         request,
-        "terminal.html",
+        "interactive_terminal.html",
         {
             "run_id": run_id,
         },
