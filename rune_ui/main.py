@@ -504,7 +504,7 @@ async def stream_run_trace(run_id: str) -> StreamingResponse:
                 async with client.stream("GET", f"{api_client.base_url}/v1/runs/{run_id}/trace", headers=api_client.headers) as response:
                     async for chunk in response.aiter_bytes():
                         yield chunk
-            except Exception as e:
+            except Exception:
                 log.exception("Failed to proxy stream for %s", run_id)
                 yield b"event: error\ndata: proxy error\n\n"
     return StreamingResponse(proxy_generator(), media_type="text/event-stream")
@@ -520,7 +520,7 @@ async def stream_browser_view(run_id: str) -> StreamingResponse:
                         return
                     async for chunk in response.aiter_bytes():
                         yield chunk
-            except Exception as e:
+            except Exception:
                 log.exception("Failed to proxy browser stream for %s", run_id)
                 yield b"event: error\ndata: proxy error\n\n"
     return StreamingResponse(proxy_generator(), media_type="text/event-stream")

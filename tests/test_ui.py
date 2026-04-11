@@ -1,14 +1,12 @@
 # SPDX-License-Identifier: Apache-2.0
+from typing import Any
 from unittest.mock import AsyncMock, patch
 
-import pytest
 from fastapi.testclient import TestClient
 
 from rune_ui.main import app
 
-from fastapi.testclient import TestClient
 
-from rune_ui.main import app
 
 client = TestClient(app)
 
@@ -246,7 +244,6 @@ def test_stream_job_logs_cancelled(mock_status: AsyncMock, mock_sleep: AsyncMock
 
 def test_rune_api_url_env_fallback() -> None:
     """RUNE_API_URL should fall back to RUNE_API_BASE_URL if the former is not set."""
-    import importlib
     import os
 
     old_url = os.environ.pop("RUNE_API_URL", None)
@@ -346,7 +343,7 @@ def test_api_client_get_vastai_models() -> None:
 
 def _make_httpx_mock(json_data: dict) -> "tuple[Any, Any]":
     """Helper: returns (mock_async_client, patch_target)."""
-    from unittest.mock import MagicMock, patch
+    from unittest.mock import MagicMock
 
     mock_response = MagicMock()
     mock_response.json.return_value = json_data
