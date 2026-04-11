@@ -13,6 +13,7 @@ permissions:
   id-token: write
   attestations: write
   packages: write
+  # Workflow trigger for Python 3.12 integration test fix
 
 jobs:
   changes:
