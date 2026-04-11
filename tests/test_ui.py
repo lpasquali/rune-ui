@@ -6,6 +6,10 @@ from fastapi.testclient import TestClient
 
 from rune_ui.main import app
 
+from fastapi.testclient import TestClient
+
+from rune_ui.main import app
+
 client = TestClient(app)
 
 

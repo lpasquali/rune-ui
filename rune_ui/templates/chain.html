@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RUNE — Chain {{ run_id }}</title>
+    <link rel="stylesheet" href="/static/solarized.css">
+    <link rel="stylesheet" href="/static/solarized-light.css">
+    <link rel="stylesheet" href="/static/print.css">
+    <link rel="stylesheet" href="/static/chain-dag.css">
+</head>
+<body>
+    <header>
+        <h1>RUNE <small style="font-size: 0.5em; color: var(--base01)">// CHAIN DAG</small></h1>
+        <div class="theme-controls chain-controls">
+            <a href="/" class="chain-nav-link">&larr; Dashboard</a>
+            <button id="chain-refresh-btn" type="button" title="Force refresh chain state">Refresh</button>
+            <button id="chain-poll-toggle" type="button" title="Pause/Resume live polling">Pause</button>
+        </div>
+    </header>
+
+    <main class="chain-main">
+        <section class="card chain-meta">
+            <h2>Chain <code>{{ run_id }}</code></h2>
+            <div id="chain-status-line">
+                Overall status:
+                <span id="chain-overall-status" class="status-badge status-pending">loading...</span>
+            </div>
+            {% if error_message %}
+            <p id="chain-error" class="chain-error" style="color: var(--red)">{{ error_message }}</p>
+            {% else %}
+            <p id="chain-error" class="chain-error" style="color: var(--red); display: none"></p>
+            {% endif %}
+        </section>
+
+        <div class="chain-layout">
+            <section class="card chain-canvas-card">
+                <div id="chain-dag-container" class="chain-dag-container">
+                    <svg id="chain-dag-svg" xmlns="http://www.w3.org/2000/svg"
+                         role="img" aria-label="Chain DAG for run {{ run_id }}"
+                         width="100%" height="480" viewBox="0 0 960 480"
+                         preserveAspectRatio="xMinYMin meet">
+                        <defs>
+                            <marker id="arrow-head" viewBox="0 0 10 10" refX="9" refY="5"
+                                    markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                                <path d="M0,0 L10,5 L0,10 z" fill="var(--base01)"></path>
+                            </marker>
+                        </defs>
+                        <g id="chain-edges"></g>
+                        <g id="chain-nodes"></g>
+                    </svg>
+                </div>
+            </section>
+
+            <aside id="chain-side-panel" class="card chain-side-panel" aria-live="polite">
+                <h3>Node details</h3>
+                <p class="chain-hint">Click a node to see start / finish times and errors.</p>
+                <dl id="chain-node-details" class="chain-node-details" hidden>
+                    <dt>Node ID</dt><dd id="panel-node-id">—</dd>
+                    <dt>Agent</dt><dd id="panel-node-agent">—</dd>
+                    <dt>Status</dt><dd id="panel-node-status">—</dd>
+                    <dt>Started</dt><dd id="panel-node-started">—</dd>
+                    <dt>Finished</dt><dd id="panel-node-finished">—</dd>
+                    <dt>Error</dt><dd id="panel-node-error">—</dd>
+                </dl>
+                <button id="chain-panel-close" type="button" hidden>Close</button>
+            </aside>
+        </div>
+    </main>
+
+    <script id="chain-initial-state" type="application/json">{{ initial_state_json|safe }}</script>
+    <script>
+        window.RUNE_CHAIN_RUN_ID = {{ run_id|tojson }};
+        window.RUNE_CHAIN_STATE_URL = "/v1/chains/" + String(window.RUNE_CHAIN_RUN_ID)
+            .split("/").map(function (p) { return encodeURIComponent(p); }).join("/") + "/state";
+    </script>
+    <script src="/static/chain-dag.js"></script>
+</body>
+</html>
