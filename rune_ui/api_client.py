@@ -106,3 +106,24 @@ class RuneApiClient:
                 json={"name": name, "config": config},
             )
             return dict(response.json())
+
+    async def get_finops_simulation(self, agent: str, model: str, gpu: str) -> Dict[str, Any]:
+        """Fetch cost projection simulation."""
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{self.base_url}/v1/finops/simulate",
+                headers=self.headers,
+                params={"agent": agent, "model": model, "gpu": gpu},
+            )
+            response.raise_for_status()
+            return dict(response.json())
+
+    async def get_chain_state(self, run_id: str) -> Dict[str, Any]:
+        """Fetch multi-agent chain state."""
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{self.base_url}/v1/chains/{run_id}/state",
+                headers=self.headers,
+            )
+            response.raise_for_status()
+            return dict(response.json())

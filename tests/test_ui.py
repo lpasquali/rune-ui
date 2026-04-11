@@ -151,11 +151,10 @@ def test_config_page_api_offline(mock_health: AsyncMock, mock_models: AsyncMock)
 
 @patch("rune_ui.api_client.RuneApiClient.get_reports", new_callable=AsyncMock)
 def test_reports_page(mock_reports: AsyncMock) -> None:
-    mock_reports.return_value = {"events": [{"timestamp": "now", "job_id": "123", "name": "test"}]}
+    mock_reports.return_value = {"events": [{"recorded_at": "now", "job_id": "123", "event": "test", "status": "ok"}]}
     response = client.get("/reports")
     assert response.status_code == 200
     assert "Historical Reports" in response.text
-
 
 @patch("rune_ui.api_client.RuneApiClient.get_reports", new_callable=AsyncMock)
 def test_reports_page_error(mock_reports: AsyncMock) -> None:

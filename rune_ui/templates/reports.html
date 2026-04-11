@@ -9,16 +9,20 @@
                 <th>JOB_ID</th>
                 <th>EVENT</th>
                 <th>STATUS</th>
+                <th>ACTIONS</th>
             </tr>
         </thead>
         <tbody>
-            {% for report in reports %}
+            {% for report in reports.events %}
             <tr style="border-bottom: 1px solid var(--base02)">
-                <td style="padding: 10px; color: var(--base01); font-size: 0.8em">{{ report.timestamp }}</td>
+                <td style="padding: 10px; color: var(--base01); font-size: 0.8em">{{ report.recorded_at }}</td>
                 <td>{{ report.job_id }}</td>
-                <td style="color: var(--cyan)">{{ report.name }}</td>
+                <td style="color: var(--cyan)">{{ report.event }}</td>
                 <td>
-                    <span style="color: var(--green)">SUCCESS</span>
+                    <span style="color: var(--green)">{{ report.status.upper() }}</span>
+                </td>
+                <td>
+                    <a hx-get="/chains/{{ report.job_id }}" hx-target="#main" style="cursor:pointer; color: var(--blue)">View Chain</a>
                 </td>
             </tr>
             {% endfor %}

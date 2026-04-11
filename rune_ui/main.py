@@ -10,6 +10,7 @@ import logging
 import os
 from pathlib import Path
 import secrets
+import time
 from typing import Any, AsyncGenerator
 
 from fastapi import FastAPI, Form, Request
@@ -136,10 +137,20 @@ async def get_benchmark_estimate(
     local_hardware: bool = Form(False),
 ) -> Any:
     """BFF logic to fetch and display the pre-flight cost estimate."""
+    provisioning = None
+    if vastai:
+        provisioning = {
+            "vastai": {
+                "template_hash": os.environ.get("RUNE_VASTAI_TEMPLATE", "c166c11f035d3a97871a23bd32ca6aba"),
+                "min_dph": 0.0,
+                "max_dph": max_dph,
+                "reliability": 0.99,
+            }
+        }
+
     payload: dict[str, Any] = {
         "model": model,
-        "vastai": vastai,
-        "max_dph": max_dph,
+        "provisioning": provisioning,
         "local_hardware": local_hardware,
         "local_tdp_watts": 350.0 if local_hardware else 0.0,
         "local_energy_rate_kwh": 0.15,
@@ -192,18 +203,25 @@ async def submit_benchmark_job(
     max_dph: float = Form(0.0),
 ) -> Any:
     """BFF logic to submit a job to the RUNE core and show the tracker."""
+    provisioning = None
+    if vastai:
+        provisioning = {
+            "vastai": {
+                "template_hash": os.environ.get("RUNE_VASTAI_TEMPLATE", "c166c11f035d3a97871a23bd32ca6aba"),
+                "min_dph": 0.0,
+                "max_dph": max_dph,
+                "reliability": 0.99,
+                "stop_instance": True,
+            }
+        }
+
     payload: dict[str, Any] = {
-        "vastai": vastai,
-        "max_dph": max_dph,
+        "provisioning": provisioning,
         "model": model,
-        "template_hash": os.environ.get("RUNE_VASTAI_TEMPLATE", "c166c11f035d3a97871a23bd32ca6aba"),
-        "min_dph": 0.0,
-        "reliability": 0.99,
         "question": question,
         "backend_warmup": True,
         "backend_warmup_timeout": 300,
         "kubeconfig": os.environ.get("RUNE_KUBECONFIG", "~/.kube/config"),
-        "vastai_stop_instance": True,
         "backend_url": backend_url if backend_url else None,
         "backend_type": backend_type,
     }
@@ -368,6 +386,53 @@ async def create_new_profile(request: Request, name: str = Form(...)) -> Any:
         return HTMLResponse('<div class="card" style="border-color: var(--green)"><p>Profile created successfully.</p><button hx-get="/config" hx-target="#main">Refresh</button></div>')
     except Exception as e:
         return HTMLResponse(f'<div class="card" style="border-color: var(--red)"><p>Error: {e}</p></div>')
+
+
+@app.get("/finops", response_class=HTMLResponse)
+async def get_finops_page(request: Request) -> Any:
+    return templates.TemplateResponse(request, "finops.html")
+
+
+@app.post("/finops/simulate", response_class=HTMLResponse)
+async def simulate_finops(
+    request: Request,
+    agent: str = Form("holmes"),
+    model: str = Form("llama3.1:8b"),
+    gpu: str = Form("rtx4090"),
+) -> Any:
+    try:
+        projection = await api_client.get_finops_simulation(agent, model, gpu)
+        return templates.TemplateResponse(
+            request,
+            "finops_results.html",
+            {
+                "projection": projection,
+                "agent": agent,
+                "model": model,
+                "gpu": gpu,
+            },
+        )
+    except Exception as exc:
+        log.exception("FinOps simulation failed")
+        return f'<div class="card" style="border-color: var(--red)"><h3>Simulation Failed</h3><p>{exc}</p></div>'
+
+
+@app.get("/chains/{run_id}", response_class=HTMLResponse)
+async def get_chain_view(request: Request, run_id: str) -> Any:
+    try:
+        chain_state = await api_client.get_chain_state(run_id)
+        return templates.TemplateResponse(
+            request,
+            "chain_detail.html",
+            {
+                "run_id": run_id,
+                "state": chain_state,
+                "now_ts": time.time(),
+            },
+        )
+    except Exception as exc:
+        log.exception("Failed to load chain view %s", run_id)
+        return f'<div class="card" style="border-color: var(--red)"><h3>Error</h3><p>{exc}</p></div>'
 
 
 @app.get("/reports", response_class=HTMLResponse)
