@@ -40,7 +40,7 @@ def test_submit_interaction_error(mock_submit: AsyncMock) -> None:
     mock_submit.side_effect = Exception("Submit failed")
     response = client.post("/runs/test-run/interaction", data={"response": "my input"})
     assert response.status_code == 200
-    assert "Error: Submit failed" in response.text
+    assert "Failed to submit response" in response.text
 
 def test_interactive_terminal_page() -> None:
     response = client.get("/runs/test-run/terminal")

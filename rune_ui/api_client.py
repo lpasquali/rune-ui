@@ -1,14 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 import os
 from typing import Any, Dict, Optional
-from urllib.parse import quote
 
 import httpx
-
-
-def quote_path_segments(value: str) -> str:
-    """URL-encode each ``/``-separated segment so opaque ids may contain slashes."""
-    return "/".join(quote(part, safe="") for part in value.split("/"))
 
 
 class RuneApiClient:
@@ -61,7 +55,7 @@ class RuneApiClient:
     async def get_job_status(self, job_id: str) -> Dict[str, Any]:
         async with httpx.AsyncClient() as client:
             response = await client.get(
-                f"{self.base_url}/v1/jobs/{quote_path_segments(job_id)}",
+                f"{self.base_url}/v1/jobs/{job_id}",
                 headers=self.headers,
             )
             return dict(response.json())
@@ -79,48 +73,9 @@ class RuneApiClient:
         """Fetch full JSON report content for a specific job."""
         async with httpx.AsyncClient() as client:
             response = await client.get(
-                f"{self.base_url}/v1/jobs/{quote_path_segments(job_id)}",
+                f"{self.base_url}/v1/jobs/{job_id}",
                 headers=self.headers,
             )
-            return dict(response.json())
-
-    async def get_chain_state(self, run_id: str) -> Dict[str, Any]:
-        """Fetch DAG state for a multi-agent chain run (Issue #99).
-
-        Returns the full state document `{run_id, nodes[], edges[], overall_status}`
-        served by `GET /v1/chains/{run_id}/state`. Raises `httpx.HTTPStatusError`
-        on non-2xx responses so callers can distinguish 404 (unknown run) from
-        transport errors.
-        """
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                f"{self.base_url}/v1/chains/{quote_path_segments(run_id)}/state",
-                headers=self.headers,
-            )
-            response.raise_for_status()
-            return dict(response.json())
-
-    async def get_interaction(self, job_id: str) -> Dict[str, Any]:
-        """Fetch pending manual interaction prompt."""
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                f"{self.base_url}/v1/runs/{quote_path_segments(job_id)}/interaction",
-                headers=self.headers,
-            )
-            if response.status_code == 404:
-                return {}
-            response.raise_for_status()
-            return dict(response.json())
-
-    async def submit_interaction(self, job_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
-        """Submit a response to a pending manual interaction."""
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{self.base_url}/v1/runs/{quote_path_segments(job_id)}/interaction",
-                headers=self.headers,
-                json=payload,
-            )
-            response.raise_for_status()
             return dict(response.json())
 
     async def get_settings(self) -> Dict[str, Any]:
@@ -150,4 +105,48 @@ class RuneApiClient:
                 headers=self.headers,
                 json={"name": name, "config": config},
             )
+            return dict(response.json())
+
+    async def get_finops_simulation(self, agent: str, model: str, gpu: str) -> Dict[str, Any]:
+        """Fetch cost projection simulation."""
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{self.base_url}/v1/finops/simulate",
+                headers=self.headers,
+                params={"agent": agent, "model": model, "gpu": gpu},
+            )
+            response.raise_for_status()
+            return dict(response.json())
+
+    async def get_chain_state(self, run_id: str) -> Dict[str, Any]:
+        """Fetch multi-agent chain state."""
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{self.base_url}/v1/chains/{run_id}/state",
+                headers=self.headers,
+            )
+            response.raise_for_status()
+            return dict(response.json())
+
+    async def get_interaction(self, run_id: str) -> Dict[str, Any]:
+        """Fetch pending interaction/prompt for a run."""
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{self.base_url}/v1/runs/{run_id}/interaction",
+                headers=self.headers,
+            )
+            if response.status_code == 404:
+                return {}
+            response.raise_for_status()
+            return dict(response.json())
+
+    async def submit_interaction(self, run_id: str, response_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Submit user response to a pending interaction."""
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{self.base_url}/v1/runs/{run_id}/interaction",
+                headers=self.headers,
+                json=response_data,
+            )
+            response.raise_for_status()
             return dict(response.json())

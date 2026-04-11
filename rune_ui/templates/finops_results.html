@@ -1,0 +1,63 @@
+<div class="card" style="border-top: 5px solid var(--blue); animation: fadeIn 0.5s;">
+    <h3>Simulation Results: {{ agent.upper() }} on {{ model }}</h3>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
+        <div class="stat-box">
+            <label>Projected Total Cost</label>
+            <div class="value" style="font-size: 2em; color: var(--green)">${{ "%.4f"|format(projection.total_cost_usd) }}</div>
+        </div>
+        <div class="stat-box">
+            <label>Confidence Score</label>
+            <div class="value">{{ (projection.confidence * 100)|int }}%</div>
+            <progress value="{{ projection.confidence }}" max="1"></progress>
+        </div>
+    </div>
+
+    <div style="margin-top: 20px;">
+        <h4>Cost Breakdown</h4>
+        <table style="width: 100%">
+            <tr>
+                <td>Compute ({{ gpu.upper() }} on Vast.ai)</td>
+                <td style="text-align: right">${{ "%.4f"|format(projection.gpu_cost_usd) }}</td>
+            </tr>
+            <tr>
+                <td>LLM Tokens ({{ model }})</td>
+                <td style="text-align: right">${{ "%.4f"|format(projection.token_cost_usd) }}</td>
+            </tr>
+            <tr style="border-top: 1px solid var(--base01); font-weight: bold;">
+                <td>Total</td>
+                <td style="text-align: right">${{ "%.4f"|format(projection.total_cost_usd) }}</td>
+            </tr>
+        </table>
+    </div>
+
+    {% if not projection.historical_match %}
+    <div style="margin-top: 15px; padding: 10px; background: rgba(181, 137, 0, 0.1); border-radius: 4px; color: var(--yellow); font-size: 0.9em;">
+        <strong>Note:</strong> No historical data found for agent "{{ agent }}". Using generic SRE agent defaults.
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .stat-box {
+        background: var(--base02);
+        padding: 15px;
+        border-radius: 8px;
+    }
+    .stat-box label {
+        display: block;
+        color: var(--base01);
+        font-size: 0.8em;
+        text-transform: uppercase;
+        margin-bottom: 5px;
+    }
+    progress {
+        width: 100%;
+        height: 8px;
+        border-radius: 4px;
+    }
+</style>

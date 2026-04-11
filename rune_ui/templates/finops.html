@@ -1,0 +1,42 @@
+<div class="card">
+    <h2>FinOps Simulator</h2>
+    <p>Calculate projected costs for AI agent runs based on historical averages and live market data.</p>
+    
+    <form hx-post="/finops/simulate" hx-target="#simulation-results" hx-indicator="#loading">
+        <div class="form-group">
+            <label for="agent">Agent:</label>
+            <select name="agent" id="agent">
+                <option value="holmes">HolmesGPT</option>
+                <option value="k8sgpt">K8sGPT</option>
+                <option value="perplexity">Perplexity Pro</option>
+                <option value="custom">Generic / Custom</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="model">LLM Model:</label>
+            <select name="model" id="model">
+                <option value="llama3.1:8b">Llama 3.1 8B (Local/Vast)</option>
+                <option value="gpt-4o">GPT-4o (Commercial)</option>
+                <option value="claude-3-5-sonnet">Claude 3.5 Sonnet (Commercial)</option>
+                <option value="deepseek-r1:32b">DeepSeek R1 32B</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="gpu">Target GPU:</label>
+            <select name="gpu" id="gpu">
+                <option value="rtx4090">NVIDIA RTX 4090 (~$0.40/hr)</option>
+                <option value="a100">NVIDIA A100 (~$1.50/hr)</option>
+                <option value="h100">NVIDIA H100 (~$3.50/hr)</option>
+            </select>
+        </div>
+        
+        <button type="submit" class="btn-primary">Run Simulation</button>
+        <span id="loading" class="htmx-indicator">Calculating...</span>
+    </form>
+</div>
+
+<div id="simulation-results">
+    <!-- Results will be injected here -->
+</div>

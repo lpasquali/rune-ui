@@ -1,0 +1,69 @@
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2>Chain Execution: {{ run_id }}</h2>
+        <span class="badge status-{{ state.overall_status }}">{{ state.overall_status.upper() }}</span>
+    </div>
+
+    {% if state.overall_status == 'running' or state.overall_status == 'pending' %}
+    <div hx-get="/chains/{{ run_id }}" hx-trigger="every 5s" hx-target="#main" hx-swap="innerHTML"></div>
+    {% endif %}
+
+    <div class="dag-container" style="margin-top: 30px; position: relative; min-height: 400px; background: var(--base03); border-radius: 8px; padding: 20px; overflow: auto;">
+        <svg width="100%" height="100%" style="position: absolute; top: 0; left: 0; pointer-events: none;">
+            <defs>
+                <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="var(--base01)" />
+                </marker>
+            </defs>
+            <!-- Edges will be drawn via JS if complex, but for now we use a simple linear flow hint -->
+        </svg>
+
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 40px;">
+            {% for node in state.nodes %}
+            <div class="node status-{{ node.status }}" 
+                 style="width: 250px; padding: 15px; border-radius: 8px; background: var(--base02); border-left: 10px solid var(--base01); cursor: pointer;"
+                 onclick="window.location.href='/runs/{{ run_id }}'"> <!-- In a real impl, this might show node-specific details -->
+                <div style="font-weight: bold; margin-bottom: 5px;">{{ node.id }}</div>
+                <div style="font-size: 0.8em; color: var(--base01);">Agent: {{ node.agent_name }}</div>
+                <div style="display: flex; justify-content: space-between; margin-top: 10px; font-size: 0.8em;">
+                    <span>{{ node.status }}</span>
+                    {% if node.started_at %}
+                    <span title="Latency">⏱️ {{ "%.1f"|format((node.finished_at or (now_ts if now_ts else 0)) - node.started_at) if node.started_at else '0' }}s</span>
+                    {% endif %}
+                </div>
+                {% if node.error %}
+                <div style="margin-top: 10px; font-size: 0.7em; color: var(--red); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    {{ node.error }}
+                </div>
+                {% endif %}
+            </div>
+            {% if not loop.last %}
+            <div style="color: var(--base01); font-size: 1.5em;">↓</div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<style>
+    .node.status-success { border-left-color: var(--green) !important; }
+    .node.status-failed { border-left-color: var(--red) !important; }
+    .node.status-running { border-left-color: var(--yellow) !important; animation: pulse 2s infinite; }
+    .node.status-pending { border-left-color: var(--base01) !important; opacity: 0.6; }
+    
+    .badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8em;
+        font-weight: bold;
+    }
+    .status-success { background: rgba(133, 153, 0, 0.2); color: var(--green); }
+    .status-failed { background: rgba(220, 50, 47, 0.2); color: var(--red); }
+    .status-running { background: rgba(181, 137, 0, 0.2); color: var(--yellow); }
+    
+    @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(181, 137, 0, 0.4); }
+        70% { box-shadow: 0 0 0 10px rgba(181, 137, 0, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(181, 137, 0, 0); }
+    }
+</style>

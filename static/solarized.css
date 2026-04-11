@@ -1,0 +1,223 @@
+/* 
+ * RUNE Shared Design Tokens
+ * Solarized "Unix Guy" Theme
+ * ADR 0003: UI Design
+ */
+
+:root {
+  /* Solarized Colors (Base) */
+  --base03:  #002b36;
+  --base02:  #073642;
+  --base01:  #586e75;
+  --base00:  #657b83;
+  --base0:   #839496;
+  --base1:   #93a1a1;
+  --base2:   #eee8d5;
+  --base3:   #fdf6e3;
+  --yellow:  #b58900;
+  --orange:  #cb4b16;
+  --red:     #dc322f;
+  --magenta: #d33682;
+  --violet:  #6c71c4;
+  --blue:    #268bd2;
+  --cyan:    #2aa198;
+  --green:   #859900;
+
+  /* RUNE Brand Colors */
+  --rune-primary: var(--blue);
+  --rune-secondary: var(--cyan);
+  --rune-accent: var(--orange);
+  
+  /* Semantic Tokens (Dark Theme Defaults for RUNE-UI) */
+  --rune-bg: var(--base03);
+  --rune-fg: var(--base0);
+  --rune-header-bg: var(--base02);
+  --rune-border: var(--base01);
+  --rune-link: var(--blue);
+  --rune-code-bg: var(--base02);
+  
+  /* Typography */
+  --rune-font-mono: "Fira Code", "JetBrains Mono", "Courier New", monospace;
+  --rune-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  /* Spacing */
+  --rune-space-xs: 0.25rem;
+  --rune-space-sm: 0.5rem;
+  --rune-space-md: 1rem;
+  --rune-space-lg: 1.5rem;
+  --rune-space-xl: 2rem;
+
+  /* Components */
+  --rune-radius: 4px;
+  --rune-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Light Theme Overrides */
+body.light-theme {
+  --rune-bg: var(--base3);
+  --rune-fg: var(--base00);
+  --rune-header-bg: var(--base2);
+  --rune-border: var(--base1);
+  --rune-link: var(--blue);
+  --rune-code-bg: var(--base2);
+}
+
+/* Global Styles */
+body {
+    background-color: var(--rune-bg);
+    color: var(--rune-fg);
+    font-family: var(--rune-font-mono);
+    margin: 0;
+    padding: var(--rune-space-xl);
+    transition: background-color 0.3s, color 0.3s;
+}
+
+header {
+    border-bottom: 2px solid var(--rune-header-bg);
+    margin-bottom: var(--rune-space-xl);
+    padding-bottom: var(--rune-space-sm);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+h1 { color: var(--rune-primary); }
+h2 { color: var(--rune-secondary); }
+
+.container {
+    display: grid;
+    grid-template-columns: 250px 1fr;
+    gap: var(--rune-space-xl);
+}
+
+nav ul {
+    list-style: none;
+    padding: 0;
+}
+
+nav a {
+    color: var(--green);
+    text-decoration: none;
+    display: block;
+    padding: var(--rune-space-md);
+    border: 1px solid transparent;
+}
+
+nav a:hover {
+    border-color: var(--rune-border);
+    background: var(--rune-header-bg);
+}
+
+.card {
+    background: var(--rune-header-bg);
+    padding: var(--rune-space-xl);
+    border-radius: var(--rune-radius);
+    border: 1px solid var(--rune-border);
+}
+
+button {
+    background: var(--rune-header-bg);
+    color: var(--rune-primary);
+    border: 1px solid var(--rune-primary);
+    padding: var(--rune-space-sm) var(--rune-space-xl);
+    cursor: pointer;
+    font-family: inherit;
+    border-radius: var(--rune-radius);
+}
+
+button:hover {
+    background: var(--rune-primary);
+    color: var(--rune-bg);
+}
+
+.modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--rune-bg);
+    border: 2px solid var(--rune-accent);
+    padding: var(--rune-space-xl);
+    z-index: 1000;
+    box-shadow: var(--rune-shadow);
+}
+
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.7);
+    z-index: 999;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: var(--rune-space-md);
+}
+
+th {
+    text-align: left;
+    padding: var(--rune-space-md);
+    border-bottom: 2px solid var(--rune-header-bg);
+    color: var(--rune-primary);
+}
+
+td {
+    padding: var(--rune-space-md);
+    border-bottom: 1px solid var(--rune-header-bg);
+}
+
+code {
+    background: var(--rune-code-bg);
+    padding: var(--rune-space-xs) var(--rune-space-sm);
+    border-radius: 3px;
+    font-family: var(--rune-font-mono);
+}
+
+input[type="text"],
+input[type="number"] {
+    background: var(--rune-bg);
+    color: var(--rune-fg);
+    border: 1px solid var(--rune-border);
+    padding: var(--rune-space-sm);
+    font-family: inherit;
+}
+
+label {
+    color: var(--base1);
+}
+
+/* Print Stylesheet (Issue #34) */
+@media print {
+  body {
+    background: #fff !important;
+    color: #000 !important;
+    padding: 0 !important;
+  }
+  
+  header, nav, button, .overlay, .modal {
+    display: none !important;
+  }
+  
+  .container {
+    display: block !important;
+  }
+  
+  .card {
+    border: 1px solid #ccc !important;
+    background: #fff !important;
+    box-shadow: none !important;
+  }
+  
+  h1, h2, th {
+    color: #000 !important;
+  }
+  
+  a {
+    color: #000 !important;
+    text-decoration: underline !important;
+  }
+}
