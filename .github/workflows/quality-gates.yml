@@ -50,6 +50,7 @@ jobs:
     if: needs.changes.outputs.python == 'true'
     with:
       path-filter: ".*"
+      python-version: "3.12"
 
   container:
     needs: [changes, security]
