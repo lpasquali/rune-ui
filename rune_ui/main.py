@@ -368,7 +368,8 @@ async def switch_profile(request: Request, profile: str = Form(...)) -> Any:
         await api_client.update_settings({"active_profile": profile})
         return HTMLResponse('<div class="card" style="border-color: var(--green)"><p>Profile switched successfully.</p><button hx-get="/config" hx-target="#main">Refresh</button></div>')
     except Exception as e:
-        return HTMLResponse(f'<div class="card" style="border-color: var(--red)"><p>Error: {e}</p></div>')
+        log.exception("Failed to switch profile")
+        return HTMLResponse('<div class="card" style="border-color: var(--red)"><p>Error: Failed to switch profile.</p></div>')
 
 @app.post("/config/update", response_class=HTMLResponse)
 async def update_config(request: Request, backend_type: str = Form(...), backend_url: str = Form(""), model: str = Form(...)) -> Any:
@@ -414,7 +415,7 @@ async def simulate_finops(
         )
     except Exception as exc:
         log.exception("FinOps simulation failed")
-        return f'<div class="card" style="border-color: var(--red)"><h3>Simulation Failed</h3><p>{exc}</p></div>'
+        return '<div class="card" style="border-color: var(--red)"><h3>Simulation Failed</h3><p>Unable to complete simulation.</p></div>'
 
 
 @app.get("/chains/{run_id}", response_class=HTMLResponse)
@@ -432,7 +433,7 @@ async def get_chain_view(request: Request, run_id: str) -> Any:
         )
     except Exception as exc:
         log.exception("Failed to load chain view %s", run_id)
-        return f'<div class="card" style="border-color: var(--red)"><h3>Error</h3><p>{exc}</p></div>'
+        return '<div class="card" style="border-color: var(--red)"><h3>Error</h3><p>Unable to load chain view.</p></div>'
 
 
 @app.get("/reports", response_class=HTMLResponse)
@@ -485,11 +486,12 @@ async def get_run_status(request: Request, run_id: str) -> Any:
     try:
         data = await api_client.get_job_status(run_id)
         status = data.get("status", "unknown")
-        
-        html_str = f'<p>Status: <strong style="color: var(--yellow);">{status}</strong></p>'
+
+        html_str = f'<p>Status: <strong style="color: var(--yellow);">{html.escape(status)}</strong></p>'
         if status not in ["completed", "failed"]:
+            escaped_run_id = html.escape(run_id)
             return HTMLResponse(
-                content=f'<div hx-get="/runs/{run_id}/status" hx-trigger="every 2s" hx-swap="outerHTML">{html_str}</div>'
+                content=f'<div hx-get="/runs/{escaped_run_id}/status" hx-trigger="every 2s" hx-swap="outerHTML">{html_str}</div>'
             )
         else:
             return HTMLResponse(content=f'<div>{html_str}</div>')
@@ -532,7 +534,8 @@ async def get_interaction(request: Request, run_id: str) -> Any:
     try:
         interaction = await api_client.get_interaction(run_id)
         if not interaction:
-            return '<div class="card"><p>No pending prompts</p><div hx-get="/runs/' + run_id + '/interaction" hx-trigger="every 2s" hx-swap="outerHTML"></div></div>'
+            escaped_run_id = html.escape(run_id)
+            return f'<div class="card"><p>No pending prompts</p><div hx-get="/runs/{escaped_run_id}/interaction" hx-trigger="every 2s" hx-swap="outerHTML"></div></div>'
 
         prompt = interaction.get("prompt", "")
         return templates.TemplateResponse(
@@ -545,7 +548,7 @@ async def get_interaction(request: Request, run_id: str) -> Any:
         )
     except Exception as exc:
         log.exception("Error polling for prompts for run %s", run_id)
-        return f'<div class="card" style="border-color: var(--red)"><h3>Error polling for prompts</h3><p>{exc}</p></div>'
+        return '<div class="card" style="border-color: var(--red)"><h3>Error polling for prompts</h3><p>Unable to poll for prompts.</p></div>'
 
 
 @app.post("/runs/{run_id}/interaction", response_class=HTMLResponse)
@@ -553,10 +556,10 @@ async def submit_interaction(request: Request, run_id: str, response: str = Form
     """Submit user response to a pending interaction."""
     try:
         result = await api_client.submit_interaction(run_id, {"response": response})
-        return f'<div class="card"><p>Response submitted</p></div>'
+        return '<div class="card"><p>Response submitted</p></div>'
     except Exception as exc:
         log.exception("Error submitting interaction for run %s", run_id)
-        return f'<div class="card" style="border-color: var(--red)"><h3>Error: {exc}</h3></div>'
+        return '<div class="card" style="border-color: var(--red)"><h3>Error</h3><p>Failed to submit response.</p></div>'
 
 
 @app.get("/runs/{run_id}/terminal", response_class=HTMLResponse)

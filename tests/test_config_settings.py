@@ -40,7 +40,7 @@ def test_switch_profile_error(mock_update):
     mock_update.side_effect = Exception("API error")
     response = client.post("/config/profile", data={"profile": "test"})
     assert response.status_code == 200
-    assert "Error: API error" in response.text
+    assert "Failed to switch profile" in response.text
 
 @patch("rune_ui.api_client.RuneApiClient.update_settings", new_callable=AsyncMock)
 def test_update_config_success(mock_update):
