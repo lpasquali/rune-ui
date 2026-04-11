@@ -367,7 +367,7 @@ async def switch_profile(request: Request, profile: str = Form(...)) -> Any:
     try:
         await api_client.update_settings({"active_profile": profile})
         return HTMLResponse('<div class="card" style="border-color: var(--green)"><p>Profile switched successfully.</p><button hx-get="/config" hx-target="#main">Refresh</button></div>')
-    except Exception as e:
+    except Exception:
         log.exception("Failed to switch profile")
         return HTMLResponse('<div class="card" style="border-color: var(--red)"><p>Error: Failed to switch profile.</p></div>')
 
@@ -413,7 +413,7 @@ async def simulate_finops(
                 "gpu": gpu,
             },
         )
-    except Exception as exc:
+    except Exception:
         log.exception("FinOps simulation failed")
         return '<div class="card" style="border-color: var(--red)"><h3>Simulation Failed</h3><p>Unable to complete simulation.</p></div>'
 
@@ -431,7 +431,7 @@ async def get_chain_view(request: Request, run_id: str) -> Any:
                 "now_ts": time.time(),
             },
         )
-    except Exception as exc:
+    except Exception:
         log.exception("Failed to load chain view %s", run_id)
         return '<div class="card" style="border-color: var(--red)"><h3>Error</h3><p>Unable to load chain view.</p></div>'
 
@@ -546,7 +546,7 @@ async def get_interaction(request: Request, run_id: str) -> Any:
                 "prompt": prompt,
             },
         )
-    except Exception as exc:
+    except Exception:
         log.exception("Error polling for prompts for run %s", run_id)
         return '<div class="card" style="border-color: var(--red)"><h3>Error polling for prompts</h3><p>Unable to poll for prompts.</p></div>'
 
@@ -555,9 +555,9 @@ async def get_interaction(request: Request, run_id: str) -> Any:
 async def submit_interaction(request: Request, run_id: str, response: str = Form("")) -> Any:
     """Submit user response to a pending interaction."""
     try:
-        result = await api_client.submit_interaction(run_id, {"response": response})
+        await api_client.submit_interaction(run_id, {"response": response})
         return '<div class="card"><p>Response submitted</p></div>'
-    except Exception as exc:
+    except Exception:
         log.exception("Error submitting interaction for run %s", run_id)
         return '<div class="card" style="border-color: var(--red)"><h3>Error</h3><p>Failed to submit response.</p></div>'
 
