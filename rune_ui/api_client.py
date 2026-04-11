@@ -127,3 +127,26 @@ class RuneApiClient:
             )
             response.raise_for_status()
             return dict(response.json())
+
+    async def get_interaction(self, run_id: str) -> Dict[str, Any]:
+        """Fetch pending interaction/prompt for a run."""
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{self.base_url}/v1/runs/{run_id}/interaction",
+                headers=self.headers,
+            )
+            if response.status_code == 404:
+                return {}
+            response.raise_for_status()
+            return dict(response.json())
+
+    async def submit_interaction(self, run_id: str, response_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Submit user response to a pending interaction."""
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{self.base_url}/v1/runs/{run_id}/interaction",
+                headers=self.headers,
+                json=response_data,
+            )
+            response.raise_for_status()
+            return dict(response.json())
