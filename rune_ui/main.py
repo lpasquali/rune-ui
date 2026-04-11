@@ -524,3 +524,48 @@ async def stream_browser_view(run_id: str) -> StreamingResponse:
                 log.exception("Failed to proxy browser stream for %s", run_id)
                 yield b"event: error\ndata: proxy error\n\n"
     return StreamingResponse(proxy_generator(), media_type="text/event-stream")
+
+
+@app.get("/runs/{run_id}/interaction", response_class=HTMLResponse)
+async def get_interaction(request: Request, run_id: str) -> Any:
+    """Poll for pending interaction/prompt from the run."""
+    try:
+        interaction = await api_client.get_interaction(run_id)
+        if not interaction:
+            return '<div class="card"><p>No pending prompts</p><div hx-get="/runs/' + run_id + '/interaction" hx-trigger="every 2s" hx-swap="outerHTML"></div></div>'
+
+        prompt = interaction.get("prompt", "")
+        return templates.TemplateResponse(
+            request,
+            "interaction.html",
+            {
+                "run_id": run_id,
+                "prompt": prompt,
+            },
+        )
+    except Exception as exc:
+        log.exception("Error polling for prompts for run %s", run_id)
+        return f'<div class="card" style="border-color: var(--red)"><h3>Error polling for prompts</h3><p>{exc}</p></div>'
+
+
+@app.post("/runs/{run_id}/interaction", response_class=HTMLResponse)
+async def submit_interaction(request: Request, run_id: str, response: str = Form("")) -> Any:
+    """Submit user response to a pending interaction."""
+    try:
+        result = await api_client.submit_interaction(run_id, {"response": response})
+        return f'<div class="card"><p>Response submitted</p></div>'
+    except Exception as exc:
+        log.exception("Error submitting interaction for run %s", run_id)
+        return f'<div class="card" style="border-color: var(--red)"><h3>Error: {exc}</h3></div>'
+
+
+@app.get("/runs/{run_id}/terminal", response_class=HTMLResponse)
+async def get_interactive_terminal(request: Request, run_id: str) -> Any:
+    """Display the interactive terminal page for a run."""
+    return templates.TemplateResponse(
+        request,
+        "terminal.html",
+        {
+            "run_id": run_id,
+        },
+    )
