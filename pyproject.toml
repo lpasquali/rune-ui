@@ -42,6 +42,9 @@ include = ["rune_ui*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "integration: integration tests",
+]
 
 [tool.ruff]
 line-length = 120
