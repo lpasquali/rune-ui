@@ -51,6 +51,7 @@ jobs:
     with:
       path-filter: ".*"
       python-version: "3.12"
+      smoke-install-enabled: false
 
   container:
     needs: [changes, security]
