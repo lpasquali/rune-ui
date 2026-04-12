@@ -42,6 +42,9 @@ include = ["rune_ui*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "integration: live Ollama (OLLAMA_TEST_URL / OLLAMA_TEST_MODEL from CI)",
+]
 
 [tool.ruff]
 line-length = 120

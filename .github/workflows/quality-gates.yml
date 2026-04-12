@@ -50,7 +50,6 @@ jobs:
     if: needs.changes.outputs.python == 'true'
     with:
       path-filter: ".*"
-      ollama-enabled: false
       smoke-python-version: "3.12"
 
   container:
