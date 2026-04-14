@@ -32,7 +32,7 @@ jobs:
           echo "docker=true" >> "$GITHUB_OUTPUT"
 
   security:
-    uses: lpasquali/rune-ci/.github/workflows/security-scan.yml@9f939b2c28317b6f55c1913c6a6485bd91e1bda5 # main
+    uses: lpasquali/rune-ci/.github/workflows/security-scan.yml@7e931bedd26d4e03bd9e6bd4f810e4d4c916ea5f # main
     secrets: inherit
 
   python:
