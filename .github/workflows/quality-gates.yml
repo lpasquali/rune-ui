@@ -32,11 +32,11 @@ jobs:
           echo "docker=true" >> "$GITHUB_OUTPUT"
 
   security:
-    uses: lpasquali/rune-ci/.github/workflows/security-scan.yml@144ef855dbf0420e5d9a8de2c8d8f89c2e789265 # main
+    uses: lpasquali/rune-ci/.github/workflows/security-scan.yml@144ef855dbf0420e5d9a8de2c8d8f89c2e789265
     secrets: inherit
 
   python:
-    uses: lpasquali/rune-ci/.github/workflows/python-quality.yml@144ef855dbf0420e5d9a8de2c8d8f89c2e789265 # main
+    uses: lpasquali/rune-ci/.github/workflows/python-quality.yml@144ef855dbf0420e5d9a8de2c8d8f89c2e789265
     with:
       source-dirs: "rune_ui"
       test-deps: "pytest pytest-cov pytest-xdist respx"
@@ -45,7 +45,7 @@ jobs:
     secrets: inherit
 
   integration:
-    uses: lpasquali/rune-ci/.github/workflows/python-integration.yml@144ef855dbf0420e5d9a8de2c8d8f89c2e789265 # main
+    uses: lpasquali/rune-ci/.github/workflows/python-integration.yml@144ef855dbf0420e5d9a8de2c8d8f89c2e789265
     needs: [changes, python]
     if: needs.changes.outputs.python == 'true'
     with:
@@ -55,18 +55,18 @@ jobs:
   container:
     needs: [changes, security]
     if: needs.changes.outputs.docker == 'true'
-    uses: lpasquali/rune-ci/.github/workflows/container-build.yml@144ef855dbf0420e5d9a8de2c8d8f89c2e789265 # main
+    uses: lpasquali/rune-ci/.github/workflows/container-build.yml@144ef855dbf0420e5d9a8de2c8d8f89c2e789265
     with:
       image-name: "rune-ui"
       push: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
 
   guard:
-    uses: lpasquali/rune-ci/.github/workflows/nginx-ingress-guard.yml@144ef855dbf0420e5d9a8de2c8d8f89c2e789265 # main
+    uses: lpasquali/rune-ci/.github/workflows/nginx-ingress-guard.yml@144ef855dbf0420e5d9a8de2c8d8f89c2e789265
 
   compliance:
     needs: [security, python, integration, container, guard]
     if: always()
-    uses: lpasquali/rune-ci/.github/workflows/pr-compliance.yml@144ef855dbf0420e5d9a8de2c8d8f89c2e789265 # main
+    uses: lpasquali/rune-ci/.github/workflows/pr-compliance.yml@144ef855dbf0420e5d9a8de2c8d8f89c2e789265
     with:
       needs-json: ${{ toJson(needs) }}
       merge-gate-excludes: "guard" # Force pass
