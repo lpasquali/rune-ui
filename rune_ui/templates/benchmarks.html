@@ -29,22 +29,25 @@
             <label for="model">LLM Model:</label>
             <input type="text" id="model" name="model" value="llama3.1:8b" required style="width: 100%; margin-bottom: 15px;">
 
+            <label for="region">Region (e.g. us-east-1 for Bedrock):</label>
+            <input type="text" id="region" name="region" placeholder="us-east-1" style="width: 100%; margin-bottom: 15px;">
+
             <label for="backend_url">Custom Backend URL (Optional):</label>
             <input type="text" id="backend_url" name="backend_url" placeholder="http://10.0.0.5:11434" style="width: 100%; margin-bottom: 10px;">
         </fieldset>
 
         <fieldset style="border: 1px solid var(--base02); padding: 20px; margin-bottom: 20px; border-radius: 4px;">
-            <legend style="color: var(--cyan); font-weight: bold; padding: 0 10px;">3. Compute Infrastructure</legend>
-            <label>
-                <input type="checkbox" name="vastai" value="true"> Provision cloud GPU via Vast.ai
-            </label><br><br>
+            <legend style="color: var(--cyan); font-weight: bold; padding: 0 10px;">3. Compute Infrastructure & Cost Estimation</legend>
+            <div style="margin-bottom: 15px;">
+                <label><input type="checkbox" name="vastai" value="true"> Vast.ai (Provisioning + Estimation)</label><br>
+                <label><input type="checkbox" name="aws" value="true"> AWS (On-Demand Estimation)</label><br>
+                <label><input type="checkbox" name="gcp" value="true"> GCP (On-Demand Estimation)</label><br>
+                <label><input type="checkbox" name="azure" value="true"> Azure (On-Demand Estimation)</label><br>
+                <label><input type="checkbox" name="local_hardware" value="true"> Local Hardware (Energy-based Estimation)</label>
+            </div>
             
             <label for="max_dph">Vast.ai Max $/hr (DPH):</label>
             <input type="number" step="0.01" name="max_dph" value="2.50" style="margin-bottom: 15px; width: 100%;"><br>
-
-            <label>
-                <input type="checkbox" name="local_hardware" value="true"> Bypass Cost Safety (Local Airgapped Hardware)
-            </label>
         </fieldset>
 
         <button type="submit" style="width: 100%; padding: 15px; font-size: 1.1em; font-weight: bold; background: var(--blue); color: var(--base03); border: none; cursor: pointer;">EVALUATE COST & PROCEED</button>

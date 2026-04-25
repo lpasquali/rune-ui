@@ -29,6 +29,20 @@
 </div>
 
 <div class="card" style="background: var(--base02); padding: 20px; border-radius: 4px; border: 1px solid var(--base01); margin-top: 20px;">
+  <h3 style="margin-top: 0; color: var(--cyan);">Agent Result</h3>
+  {% if run.result_type == 'image' %}
+  <div style="text-align: center; background: var(--base03); padding: 10px; border-radius: 4px;">
+    <img style="max-width: 100%; border: 1px solid var(--base01); border-radius: 4px;" src="{{ run.answer }}" alt="AI Result">
+    <p style="color: var(--base1); margin-top: 10px;">{{ run.answer }}</p>
+  </div>
+  {% else %}
+  <div style="background: var(--base03); padding: 15px; border-radius: 4px; font-family: sans-serif; color: var(--base0); white-space: pre-wrap;">
+    {{ run.answer }}
+  </div>
+  {% endif %}
+</div>
+
+<div class="card" style="background: var(--base02); padding: 20px; border-radius: 4px; border: 1px solid var(--base01); margin-top: 20px;">
   <h3 style="margin-top: 0; color: var(--cyan);">Browser Live View</h3>
   <div hx-ext="sse" sse-connect="/api/v1/runs/{{ run.id }}/browser-stream" style="text-align: center; background: var(--base03); padding: 10px; border-radius: 4px;">
     <img sse-swap="screenshot" id="browser-view" style="max-width: 100%; border: 1px solid var(--base01); border-radius: 4px;" src="/static/placeholder.png" alt="Live browser view">
