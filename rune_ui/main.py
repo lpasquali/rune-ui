@@ -131,8 +131,12 @@ async def get_benchmark_estimate(
     question: str = Form("What is unhealthy in this Kubernetes cluster?"),
     backend_type: str = Form("ollama"),
     backend_url: str = Form(""),
+    region: str = Form(""),
     model: str = Form(...),
     vastai: bool = Form(False),
+    aws: bool = Form(False),
+    gcp: bool = Form(False),
+    azure: bool = Form(False),
     max_dph: float = Form(0.0),
     local_hardware: bool = Form(False),
 ) -> Any:
@@ -150,7 +154,11 @@ async def get_benchmark_estimate(
 
     payload: dict[str, Any] = {
         "model": model,
+        "region": region,
         "provisioning": provisioning,
+        "aws": aws,
+        "gcp": gcp,
+        "azure": azure,
         "local_hardware": local_hardware,
         "local_tdp_watts": 350.0 if local_hardware else 0.0,
         "local_energy_rate_kwh": 0.15,
@@ -198,8 +206,12 @@ async def submit_benchmark_job(
     question: str = Form("What is unhealthy in this Kubernetes cluster?"),
     backend_type: str = Form("ollama"),
     backend_url: str = Form(""),
+    region: str = Form(""),
     model: str = Form(...),
     vastai: bool = Form(False),
+    aws: bool = Form(False),
+    gcp: bool = Form(False),
+    azure: bool = Form(False),
     max_dph: float = Form(0.0),
 ) -> Any:
     """BFF logic to submit a job to the RUNE core and show the tracker."""
@@ -218,12 +230,16 @@ async def submit_benchmark_job(
     payload: dict[str, Any] = {
         "provisioning": provisioning,
         "model": model,
+        "region": region,
         "question": question,
         "backend_warmup": True,
         "backend_warmup_timeout": 300,
         "kubeconfig": os.environ.get("RUNE_KUBECONFIG", "~/.kube/config"),
         "backend_url": backend_url if backend_url else None,
         "backend_type": backend_type,
+        "aws": aws,
+        "gcp": gcp,
+        "azure": azure,
     }
     
     if kind == "agentic-agent":
@@ -474,7 +490,9 @@ async def run_detail_view(request: Request, run_id: str) -> Any:
             "score": result.get("score"),
             "duration_ms": telemetry.get("duration_ms", 0),
             "cost_usd": telemetry.get("cost_usd", "0.00"),
-            "tokens": tokens.get("total_tokens", 0)
+            "tokens": tokens.get("total_tokens", 0),
+            "result_type": result.get("result_type"),
+            "answer": result.get("answer"),
         }
         return templates.TemplateResponse(request, "run_detail.html", {"run": run_info})
     except Exception:

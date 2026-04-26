@@ -24,8 +24,12 @@
         <input type="hidden" name="question" value="{{ question }}">
         <input type="hidden" name="backend_type" value="{{ backend_type }}">
         <input type="hidden" name="backend_url" value="{{ backend_url }}">
+        <input type="hidden" name="region" value="{{ region }}">
         <input type="hidden" name="model" value="{{ model }}">
         <input type="hidden" name="vastai" value="{{ 'true' if vastai else 'false' }}">
+        <input type="hidden" name="aws" value="{{ 'true' if aws else 'false' }}">
+        <input type="hidden" name="gcp" value="{{ 'true' if gcp else 'false' }}">
+        <input type="hidden" name="azure" value="{{ 'true' if azure else 'false' }}">
         <input type="hidden" name="max_dph" value="{{ max_dph }}">
         <div style="display: flex; gap: 10px; margin-top: 30px;">
             <button type="submit">CONFIRM & RUN</button>
