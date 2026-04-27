@@ -151,6 +151,65 @@ async def get_active_suites(request: Request) -> str:
     return '<div class="card"><p>No active suites found. Create one above to start parallel benchmarking.</p></div>'
 
 
+@app.get("/api/jobs/count", response_class=HTMLResponse)
+async def get_active_job_count(request: Request) -> str:
+    """Return the raw count of active jobs for the sidebar badge."""
+    try:
+        reports_data = await api_client.get_reports()
+        events = reports_data.get("events", [])
+        active = [e for e in events if e.get("status") in ["running", "pending"]]
+        return str(len(active))
+    except Exception:
+        return "0"
+
+
+@app.get("/api/jobs/active", response_class=HTMLResponse)
+async def get_active_job_list(request: Request) -> str:
+    """Return HTML cards for all active/pending jobs for the drawer."""
+    try:
+        reports_data = await api_client.get_reports()
+        events = reports_data.get("events", [])
+        active = [e for e in events if e.get("status") in ["running", "pending"]]
+        
+        if not active:
+            return '<p style="color: var(--base01); text-align: center; margin-top: 40px;">No active jobs in queue.</p>'
+            
+        cards = []
+        for job in active:
+            jid = job.get("job_id", "Unknown")
+            status = job.get("status", "unknown")
+            cards.append(
+                f'<div class="mini-job-card">'
+                f'<strong>{jid[:12]}...</strong>'
+                f'<div style="display: flex; justify-content: space-between; margin-top: 5px;">'
+                f'<span style="color: var(--yellow)">{status.upper()}</span>'
+                f'<a href="#" hx-get="/runs/{jid}" hx-target="#main" onclick="toggleDrawer()">Details</a>'
+                f'</div></div>'
+            )
+        return "".join(cards)
+    except Exception:
+        return '<p style="color: var(--red)">Error fetching queue.</p>'
+
+
+@app.get("/secrets", response_class=HTMLResponse)
+async def get_secrets_page(request: Request) -> Any:
+    try:
+        secrets = await api_client.get_secrets()
+        return templates.TemplateResponse(request, "secrets.html", {"secrets": secrets})
+    except Exception:
+        log.exception("Failed to load secrets")
+        return '<div class="card" style="border-color: var(--red)"><h3>Error</h3><p>Unable to load secrets vault.</p></div>'
+
+
+@app.post("/secrets/update", response_class=HTMLResponse)
+async def update_secret(request: Request, key: str = Form(...), value: str = Form(...)) -> Any:
+    try:
+        await api_client.update_secret(key, value)
+        return HTMLResponse(f'<div class="card" style="border-color: var(--green)"><p>Secret <strong>{key}</strong> updated.</p><button hx-get="/secrets" hx-target="#main">Back to Vault</button></div>')
+    except Exception as e:
+        return HTMLResponse(f'<div class="card" style="border-color: var(--red)"><p>Update failed: {e}</p></div>')
+
+
 @app.get("/api/status", response_class=HTMLResponse)
 async def get_status(request: Request) -> str:
     try:
@@ -538,6 +597,16 @@ async def view_report(request: Request, job_id: str) -> Any:
     except Exception:
         log.exception("Failed to load report %s", job_id)
         return '<div class="card" style="border-color: var(--red)"><h3>Report Error</h3><p>Unable to load report.</p></div>'
+
+@app.get("/api/reports/{job_id}/export/json", response_class=JSONResponse)
+async def export_report_json(job_id: str) -> Any:
+    """Export the raw JSON of a benchmark report."""
+    try:
+        report = await api_client.get_report_content(job_id)
+        return JSONResponse(content=report, headers={"Content-Disposition": f'attachment; filename="rune-report-{job_id}.json"'})
+    except Exception:
+        log.exception("Failed to export report %s", job_id)
+        return JSONResponse(status_code=404, content={"error": "Report not found"})
 
 @app.get("/runs/{run_id}", response_class=HTMLResponse)
 async def run_detail_view(request: Request, run_id: str) -> Any:

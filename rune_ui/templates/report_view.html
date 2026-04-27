@@ -1,5 +1,11 @@
 <div class="card">
-    <h2 style="color: var(--blue)">Benchmark Report: {{ report.job_id }}</h2>
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2 style="color: var(--blue)">Benchmark Report: {{ report.job_id }}</h2>
+        <div class="report-actions">
+            <a href="/api/reports/{{ report.job_id }}/export/json" download class="btn-secondary" style="padding: 8px 16px; margin-right: 10px; background: var(--base02); color: var(--base0); border: 1px solid var(--base01); border-radius: var(--border-radius); text-decoration: none;">Download JSON</a>
+            <button onclick="window.print()" class="btn-primary" style="padding: 8px 16px; background: var(--blue); color: var(--base03); border: none; border-radius: var(--border-radius); cursor: pointer;">Print / PDF</button>
+        </div>
+    </div>
     <p><strong>Timestamp:</strong> {{ report.created_at }}</p>
     <p><strong>Status:</strong> <span style="color: var(--green)">{{ report.status.upper() }}</span></p>
 

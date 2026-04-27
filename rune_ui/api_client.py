@@ -17,6 +17,25 @@ class RuneApiClient:
         if token:
             self.headers["Authorization"] = f"Bearer {token}"
 
+    async def get_secrets(self) -> Dict[str, Any]:
+        """Fetch current active secret names (masked)."""
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{self.base_url}/v1/settings/secrets",
+                headers=self.headers,
+            )
+            return dict(response.json())
+
+    async def update_secret(self, key: str, value: str) -> Dict[str, Any]:
+        """Update a specific secret."""
+        async with httpx.AsyncClient() as client:
+            response = await client.put(
+                f"{self.base_url}/v1/settings/secrets",
+                headers=self.headers,
+                json={"key": key, "value": value},
+            )
+            return dict(response.json())
+
     async def get_health(self) -> Dict[str, Any]:
         async with httpx.AsyncClient() as client:
             response = await client.get(f"{self.base_url}/healthz")

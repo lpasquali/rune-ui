@@ -41,9 +41,6 @@
             localStorage.setItem('rune-theme', next);
             applyTheme(next);
         });
-    })();
-    </script>
-    
     <div class="container">
         <nav>
             <ul>
@@ -52,13 +49,41 @@
                 <li><a hx-get="/config" hx-target="#main">Configuration</a></li>
                 <li><a hx-get="/benchmarks" hx-target="#main">Benchmarks</a></li>
                 <li><a hx-get="/suites" hx-target="#main">Batch Suites</a></li>
+                <li><a hx-get="/secrets" hx-target="#main">Secrets</a></li>
                 <li><a hx-get="/finops" hx-target="#main">FinOps Simulator</a></li>
                 <li><a hx-get="/reports" hx-target="#main">Reports</a></li>
             </ul>
+
+            <div class="active-jobs-summary" style="margin-top: 40px; padding: 15px; background: rgba(38, 139, 210, 0.05); border-radius: var(--border-radius); border: 1px solid rgba(38, 139, 210, 0.1);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <span style="font-weight: 700; font-size: 0.8rem; text-transform: uppercase;">Active Jobs</span>
+                    <span id="global-job-badge" class="badge" hx-get="/api/jobs/count" hx-trigger="load, every 5s">0</span>
+                </div>
+                <button onclick="toggleDrawer()" style="width: 100%; font-size: 0.7rem; padding: 8px;">View Queue</button>
+            </div>
         </nav>
-        
+
         <main id="main">
-            <div class="card">
+    ...
+
+    <!-- Global Job Drawer (Slide-over) -->
+    <div id="job-drawer" class="drawer">
+        <div class="drawer-header">
+            <h3>Global Job Queue</h3>
+            <button onclick="toggleDrawer()" class="btn-close">&times;</button>
+        </div>
+        <div class="drawer-content" hx-get="/api/jobs/active" hx-trigger="every 5s, load">
+            <p style="color: var(--base01)">Loading queue...</p>
+        </div>
+    </div>
+
+    <script>
+        function toggleDrawer() {
+            document.getElementById('job-drawer').classList.toggle('open');
+        }
+        function toggleTheme() {
+    ...
+
                 <h2>Welcome to RUNE</h2>
                 <p>Select a module from the sidebar to begin.</p>
                 <div id="status" hx-get="/api/status" hx-trigger="load, every 30s">
