@@ -31,6 +31,17 @@ class RuneApiClient:
             )
             return dict(response.json())
 
+    async def get_backend_models(self, backend_type: str, backend_url: str = "") -> Dict[str, Any]:
+        """Fetch available models for a specific backend type and URL."""
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{self.base_url}/v1/llm/models",
+                headers=self.headers,
+                params={"backend_type": backend_type, "backend_url": backend_url},
+            )
+            response.raise_for_status()
+            return dict(response.json())
+
     async def get_estimate(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Request a cost estimate from the RUNE core."""
         async with httpx.AsyncClient() as client:
@@ -107,13 +118,21 @@ class RuneApiClient:
             )
             return dict(response.json())
 
-    async def get_finops_simulation(self, agent: str, model: str, gpu: str) -> Dict[str, Any]:
-        """Fetch cost projection simulation."""
+    async def get_finops_simulation(
+        self, agent: str, model: str, gpu: str, runs_per_period: int = 1, period_days: int = 1
+    ) -> Dict[str, Any]:
+        """Fetch cost projection simulation with period scaling."""
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 f"{self.base_url}/v1/finops/simulate",
                 headers=self.headers,
-                params={"agent": agent, "model": model, "gpu": gpu},
+                params={
+                    "agent": agent, 
+                    "model": model, 
+                    "gpu": gpu,
+                    "runs_per_period": runs_per_period,
+                    "period_days": period_days
+                },
             )
             response.raise_for_status()
             return dict(response.json())

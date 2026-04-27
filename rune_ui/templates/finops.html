@@ -27,12 +27,24 @@
             <label for="gpu">Target GPU:</label>
             <select name="gpu" id="gpu">
                 <option value="rtx4090">NVIDIA RTX 4090 (~$0.40/hr)</option>
-                <option value="a100">NVIDIA A100 (~$1.50/hr)</option>
-                <option value="h100">NVIDIA H100 (~$3.50/hr)</option>
+                <option value="a100">NVIDIA A100 (~$3.50/hr)</option>
+                <option value="h100">NVIDIA H100 (~$12.00/hr)</option>
             </select>
         </div>
+
+        <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; background: rgba(88, 110, 117, 0.05); padding: 15px; border-radius: 8px; margin-top: 10px;">
+            <div>
+                <label for="runs_per_period">Runs per period:</label>
+                <input type="number" name="runs_per_period" id="runs_per_period" value="10" min="1">
+            </div>
+            <div>
+                <label for="period_days">Time Span (Days):</label>
+                <input type="number" name="period_days" id="period_days" value="30" min="1">
+                <small style="color: var(--base01)">e.g. 30 for monthly budget</small>
+            </div>
+        </div>
         
-        <button type="submit" class="btn-primary">Run Simulation</button>
+        <button type="submit" class="btn-primary" style="margin-top: 20px; width: 100%">Run Simulation & Project Budget</button>
         <span id="loading" class="htmx-indicator">Calculating...</span>
     </form>
 </div>

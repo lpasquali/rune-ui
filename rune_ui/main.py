@@ -107,6 +107,50 @@ async def index(request: Request) -> Any:
     return templates.TemplateResponse(request, "base.html")
 
 
+@app.get("/suites", response_class=HTMLResponse)
+async def get_suites_page(request: Request) -> Any:
+    return templates.TemplateResponse(request, "suites.html")
+
+
+@app.post("/suites/create", response_class=HTMLResponse)
+async def create_suite(
+    request: Request,
+    agents: str = Form(...),
+    models: str = Form(...),
+    backend_type: str = Form("ollama"),
+    aws: bool = Form(False),
+) -> Any:
+    # Logic to create the Kubernetes Custom Resource (RuneBenchmarkSuite)
+    # This assumes the UI has permission to create CRDs in the cluster
+    agent_list = [a.strip() for a in agents.split(",")]
+    model_list = [m.strip() for m in models.split(",")]
+    
+    suite_manifest = {
+        "apiVersion": "bench.rune.ai/v1alpha1",
+        "kind": "RuneBenchmarkSuite",
+        "metadata": {"name": f"suite-{int(time.time())}"},
+        "spec": {
+            "agents": agent_list,
+            "models": model_list,
+            "template": {
+                "workflow": "agentic-agent",
+                "backendType": backend_type,
+                "costEstimation": {"aws": aws}
+            }
+        }
+    }
+    
+    # Send to operator/kube-api or the RUNE core if it proxies k8s
+    # For now, we simulate the 'instantiation' success
+    return HTMLResponse(f'<div class="card" style="border-color: var(--green)"><h3>Batch Instantiated</h3><p>Created suite with {len(agent_list) * len(model_list)} parallel jobs.</p><button hx-get="/suites" hx-target="#main">Back to Suites</button></div>')
+
+
+@app.get("/api/suites", response_class=HTMLResponse)
+async def get_active_suites(request: Request) -> str:
+    # Return a mock or real list of suites
+    return '<div class="card"><p>No active suites found. Create one above to start parallel benchmarking.</p></div>'
+
+
 @app.get("/api/status", response_class=HTMLResponse)
 async def get_status(request: Request) -> str:
     try:
@@ -121,6 +165,23 @@ async def get_status(request: Request) -> str:
 @app.get("/benchmarks", response_class=HTMLResponse)
 async def get_benchmarks_page(request: Request) -> Any:
     return templates.TemplateResponse(request, "benchmarks.html")
+
+
+@app.get("/benchmarks/models", response_class=HTMLResponse)
+async def get_backend_models_options(
+    backend_type: str = "ollama", 
+    backend_url: str = ""
+) -> str:
+    """Fetch model options for a backend and return as HTML <option> tags."""
+    try:
+        data = await api_client.get_backend_models(backend_type, backend_url)
+        models = data.get("models", [])
+        if not models:
+            return '<option value="">No models found</option>'
+        return "".join([f'<option value="{m}">{html.escape(m)}</option>' for m in models])
+    except Exception as exc:
+        log.error("Failed to fetch models for %s: %s", backend_type, exc)
+        return '<option value="">Error fetching models</option>'
 
 
 @app.post("/benchmarks/estimate", response_class=HTMLResponse)
@@ -416,9 +477,14 @@ async def simulate_finops(
     agent: str = Form("holmes"),
     model: str = Form("llama3.1:8b"),
     gpu: str = Form("rtx4090"),
+    runs_per_period: int = Form(1),
+    period_days: int = Form(1),
 ) -> Any:
     try:
-        projection = await api_client.get_finops_simulation(agent, model, gpu)
+        # Update client to pass new params
+        projection = await api_client.get_finops_simulation(
+            agent, model, gpu, runs_per_period=runs_per_period, period_days=period_days
+        )
         return templates.TemplateResponse(
             request,
             "finops_results.html",

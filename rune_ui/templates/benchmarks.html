@@ -20,20 +20,32 @@
         <fieldset style="border: 1px solid var(--base02); padding: 20px; margin-bottom: 20px; border-radius: 4px;">
             <legend style="color: var(--cyan); font-weight: bold; padding: 0 10px;">2. AI Backend Configuration</legend>
             <label for="backend_type">Backend Provider:</label>
-            <select id="backend_type" name="backend_type" style="width: 100%; margin-bottom: 15px; padding: 8px; background: var(--base03); color: var(--base0); border: 1px solid var(--base01);">
+            <select id="backend_type" name="backend_type" 
+                    hx-get="/benchmarks/models" 
+                    hx-include="#backend_url"
+                    hx-target="#model"
+                    hx-trigger="change, load"
+                    style="width: 100%; margin-bottom: 15px; padding: 8px; background: var(--base03); color: var(--base0); border: 1px solid var(--base01);">
                 <option value="ollama">Ollama (Local/Vast)</option>
                 <option value="openai">OpenAI (SaaS)</option>
                 <option value="bedrock">AWS Bedrock</option>
             </select>
 
             <label for="model">LLM Model:</label>
-            <input type="text" id="model" name="model" value="llama3.1:8b" required style="width: 100%; margin-bottom: 15px;">
+            <select id="model" name="model" required style="width: 100%; margin-bottom: 15px;">
+                <option value="llama3.1:8b">Loading models...</option>
+            </select>
 
             <label for="region">Region (e.g. us-east-1 for Bedrock):</label>
             <input type="text" id="region" name="region" placeholder="us-east-1" style="width: 100%; margin-bottom: 15px;">
 
             <label for="backend_url">Custom Backend URL (Optional):</label>
-            <input type="text" id="backend_url" name="backend_url" placeholder="http://10.0.0.5:11434" style="width: 100%; margin-bottom: 10px;">
+            <input type="text" id="backend_url" name="backend_url" 
+                   hx-get="/benchmarks/models" 
+                   hx-include="#backend_type"
+                   hx-target="#model" 
+                   hx-trigger="keyup changed delay:500ms"
+                   placeholder="http://10.0.0.5:11434" style="width: 100%; margin-bottom: 10px;">
         </fieldset>
 
         <fieldset style="border: 1px solid var(--base02); padding: 20px; margin-bottom: 20px; border-radius: 4px;">

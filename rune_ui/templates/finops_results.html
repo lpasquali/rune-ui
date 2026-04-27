@@ -3,13 +3,13 @@
     
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
         <div class="stat-box">
-            <label>Projected Total Cost</label>
-            <div class="value" style="font-size: 2em; color: var(--green)">${{ "%.4f"|format(projection.total_cost_usd) }}</div>
+            <label>Cost per Single Run</label>
+            <div class="value" style="font-size: 1.5em; color: var(--base0)">${{ "%.4f"|format(projection.projected_cost_usd) }}</div>
         </div>
-        <div class="stat-box">
-            <label>Confidence Score</label>
-            <div class="value">{{ (projection.confidence * 100)|int }}%</div>
-            <progress value="{{ projection.confidence }}" max="1"></progress>
+        <div class="stat-box" style="border: 2px solid var(--green)">
+            <label>Projected {{ projection.period_days }}d Budget</label>
+            <div class="value" style="font-size: 2em; color: var(--green)">${{ "%.2f"|format(projection.projected_total_usd) }}</div>
+            <small style="color: var(--base01)">Assumes {{ projection.runs_per_period }} runs / day</small>
         </div>
     </div>
 
