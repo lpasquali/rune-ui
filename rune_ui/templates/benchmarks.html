@@ -1,127 +1,70 @@
 <div class="card">
     <h2 style="color: var(--blue);">New Benchmark Wizard</h2>
-    
-    <!-- Stepper Indicator -->
-    <div class="stepper-indicator" style="display: flex; justify-content: space-between; margin-bottom: 30px;">
-        <div id="step1-indicator" class="step active" style="flex: 1; text-align: center; padding-bottom: 10px; border-bottom: 3px solid var(--blue); font-weight: bold; color: var(--blue);">1. Task</div>
-        <div id="step2-indicator" class="step" style="flex: 1; text-align: center; padding-bottom: 10px; border-bottom: 3px solid var(--base01); color: var(--base01);">2. AI Backend</div>
-        <div id="step3-indicator" class="step" style="flex: 1; text-align: center; padding-bottom: 10px; border-bottom: 3px solid var(--base01); color: var(--base01);">3. Infra & Cost</div>
-    </div>
-
-    <form hx-post="/benchmarks/estimate" hx-target="#main" hx-swap="beforeend" class="wizard-form" id="benchmark-form">
+    <form hx-post="/benchmarks/estimate" hx-target="#main" hx-swap="beforeend" class="wizard-form">
         
-        <!-- Step 1: Task -->
-        <div id="step1" class="wizard-step">
-            <fieldset style="border: 1px solid var(--base02); padding: 20px; border-radius: var(--border-radius);">
-                <legend style="color: var(--cyan); font-weight: bold; padding: 0 10px;">Task Configuration</legend>
-                <label for="kind">Job Type:</label>
-                <select id="kind" name="kind" style="margin-bottom: 15px;">
-                    <option value="benchmark">Full Suite Benchmark</option>
-                    <option value="agentic-agent">Single Agent Run</option>
-                </select>
-                
-                <label for="agent">Target Agent (if Single Agent):</label>
-                <input type="text" id="agent" name="agent" value="sre:k8sgpt" style="margin-bottom: 15px;">
-
-                <label for="question">Question / Prompt:</label>
-                <textarea id="question" name="question" style="height: 60px; margin-bottom: 10px;">What is unhealthy in this Kubernetes cluster?</textarea>
-            </fieldset>
-            <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
-                <button type="button" onclick="nextStep(1)" style="padding: 12px 24px; background: var(--blue); color: var(--base03);">Next &rarr;</button>
-            </div>
-        </div>
-
-        <!-- Step 2: Backend -->
-        <div id="step2" class="wizard-step" style="display: none;">
-            <fieldset style="border: 1px solid var(--base02); padding: 20px; border-radius: var(--border-radius);">
-                <legend style="color: var(--cyan); font-weight: bold; padding: 0 10px;">AI Backend Configuration</legend>
-                <label for="backend_type">Backend Provider:</label>
-                <select id="backend_type" name="backend_type" 
-                        hx-get="/benchmarks/models" 
-                        hx-include="#backend_url"
-                        hx-target="#model"
-                        hx-trigger="change, load"
-                        style="margin-bottom: 15px;">
-                    <option value="ollama">Ollama (Local/Vast)</option>
-                    <option value="openai">OpenAI (SaaS)</option>
-                    <option value="bedrock">AWS Bedrock</option>
-                </select>
-
-                <label for="model">LLM Model:</label>
-                <select id="model" name="model" required style="margin-bottom: 15px;">
-                    <option value="llama3.1:8b">Loading models...</option>
-                </select>
-
-                <label for="region">Region (e.g. us-east-1 for Bedrock):</label>
-                <input type="text" id="region" name="region" placeholder="us-east-1" style="margin-bottom: 15px;">
-
-                <label for="backend_url">Custom Backend URL (Optional):</label>
-                <input type="text" id="backend_url" name="backend_url" 
-                       hx-get="/benchmarks/models" 
-                       hx-include="#backend_type"
-                       hx-target="#model" 
-                       hx-trigger="keyup changed delay:500ms"
-                       placeholder="http://10.0.0.5:11434" style="margin-bottom: 10px;">
-            </fieldset>
-            <div style="display: flex; justify-content: space-between; margin-top: 20px;">
-                <button type="button" onclick="prevStep(2)" style="padding: 12px 24px; background: var(--base01); color: var(--base03);">&larr; Back</button>
-                <button type="button" onclick="nextStep(2)" style="padding: 12px 24px; background: var(--blue); color: var(--base03);">Next &rarr;</button>
-            </div>
-        </div>
-
-        <!-- Step 3: Infra & Cost -->
-        <div id="step3" class="wizard-step" style="display: none;">
-            <fieldset style="border: 1px solid var(--base02); padding: 20px; border-radius: var(--border-radius);">
-                <legend style="color: var(--cyan); font-weight: bold; padding: 0 10px;">Compute Infrastructure & Cost Estimation</legend>
-                <div style="margin-bottom: 15px;">
-                    <label><input type="checkbox" name="vastai" value="true"> Vast.ai (Provisioning + Estimation)</label><br>
-                    <label><input type="checkbox" name="aws" value="true"> AWS (On-Demand Estimation)</label><br>
-                    <label><input type="checkbox" name="gcp" value="true"> GCP (On-Demand Estimation)</label><br>
-                    <label><input type="checkbox" name="azure" value="true"> Azure (On-Demand Estimation)</label><br>
-                    <label><input type="checkbox" name="local_hardware" value="true"> Local Hardware (Energy-based Estimation)</label>
-                </div>
-                
-                <label for="max_dph">Vast.ai Max $/hr (DPH):</label>
-                <input type="number" step="0.01" name="max_dph" value="2.50" style="margin-bottom: 15px;"><br>
-            </fieldset>
+        <fieldset style="border: 1px solid var(--base02); padding: 20px; margin-bottom: 20px; border-radius: 4px;">
+            <legend style="color: var(--cyan); font-weight: bold; padding: 0 10px;">1. Task Configuration</legend>
+            <label for="kind">Job Type:</label>
+            <select id="kind" name="kind" style="width: 100%; margin-bottom: 15px; padding: 8px; background: var(--base03); color: var(--base0); border: 1px solid var(--base01);">
+                <option value="benchmark">Full Suite Benchmark</option>
+                <option value="agentic-agent">Single Agent Run</option>
+            </select>
             
-            <div style="display: flex; justify-content: space-between; margin-top: 20px;">
-                <button type="button" onclick="prevStep(3)" style="padding: 12px 24px; background: var(--base01); color: var(--base03);">&larr; Back</button>
-                <button type="submit" style="padding: 12px 24px; font-weight: bold; background: var(--green); color: var(--base03);">EVALUATE COST & PROCEED</button>
+            <label for="agent">Target Agent (if Single Agent):</label>
+            <input type="text" id="agent" name="agent" value="sre:k8sgpt" style="width: 100%; margin-bottom: 15px;">
+
+            <label for="question">Question / Prompt:</label>
+            <textarea id="question" name="question" style="width: 100%; height: 60px; margin-bottom: 10px; background: var(--base03); color: var(--base0); border: 1px solid var(--base01); padding: 8px;">What is unhealthy in this Kubernetes cluster?</textarea>
+        </fieldset>
+
+        <fieldset style="border: 1px solid var(--base02); padding: 20px; margin-bottom: 20px; border-radius: 4px;">
+            <legend style="color: var(--cyan); font-weight: bold; padding: 0 10px;">2. AI Backend Configuration</legend>
+            <label for="backend_type">Backend Provider:</label>
+            <select id="backend_type" name="backend_type" 
+                    hx-get="/benchmarks/models" 
+                    hx-include="#backend_url"
+                    hx-target="#model"
+                    hx-trigger="change, load"
+                    style="width: 100%; margin-bottom: 15px; padding: 8px; background: var(--base03); color: var(--base0); border: 1px solid var(--base01);">
+                <option value="ollama">Ollama (Local/Vast)</option>
+                <option value="openai">OpenAI (SaaS)</option>
+                <option value="bedrock">AWS Bedrock</option>
+            </select>
+
+            <label for="model">LLM Model:</label>
+            <select id="model" name="model" required style="width: 100%; margin-bottom: 15px;">
+                <option value="llama3.1:8b">Loading models...</option>
+            </select>
+
+            <label for="region">Region (e.g. us-east-1 for Bedrock):</label>
+            <input type="text" id="region" name="region" placeholder="us-east-1" style="width: 100%; margin-bottom: 15px;">
+
+            <label for="region">Region (e.g. us-east-1 for Bedrock):</label>
+            <input type="text" id="region" name="region" placeholder="us-east-1" style="width: 100%; margin-bottom: 15px;">
+
+            <label for="backend_url">Custom Backend URL (Optional):</label>
+            <input type="text" id="backend_url" name="backend_url" 
+                   hx-get="/benchmarks/models" 
+                   hx-include="#backend_type"
+                   hx-target="#model" 
+                   hx-trigger="keyup changed delay:500ms"
+                   placeholder="http://10.0.0.5:11434" style="width: 100%; margin-bottom: 10px;">
+        </fieldset>
+
+        <fieldset style="border: 1px solid var(--base02); padding: 20px; margin-bottom: 20px; border-radius: 4px;">
+            <legend style="color: var(--cyan); font-weight: bold; padding: 0 10px;">3. Compute Infrastructure & Cost Estimation</legend>
+            <div style="margin-bottom: 15px;">
+                <label><input type="checkbox" name="vastai" value="true"> Vast.ai (Provisioning + Estimation)</label><br>
+                <label><input type="checkbox" name="aws" value="true"> AWS (On-Demand Estimation)</label><br>
+                <label><input type="checkbox" name="gcp" value="true"> GCP (On-Demand Estimation)</label><br>
+                <label><input type="checkbox" name="azure" value="true"> Azure (On-Demand Estimation)</label><br>
+                <label><input type="checkbox" name="local_hardware" value="true"> Local Hardware (Energy-based Estimation)</label>
             </div>
-        </div>
+            
+            <label for="max_dph">Vast.ai Max $/hr (DPH):</label>
+            <input type="number" step="0.01" name="max_dph" value="2.50" style="margin-bottom: 15px; width: 100%;"><br>
+        </fieldset>
+
+        <button type="submit" style="width: 100%; padding: 15px; font-size: 1.1em; font-weight: bold; background: var(--blue); color: var(--base03); border: none; cursor: pointer;">EVALUATE COST & PROCEED</button>
     </form>
 </div>
-
-<script>
-    function nextStep(current) {
-        document.getElementById('step' + current).style.display = 'none';
-        document.getElementById('step' + (current + 1)).style.display = 'block';
-        updateIndicators(current + 1);
-    }
-
-    function prevStep(current) {
-        document.getElementById('step' + current).style.display = 'none';
-        document.getElementById('step' + (current - 1)).style.display = 'block';
-        updateIndicators(current - 1);
-    }
-
-    function updateIndicators(activeStep) {
-        for (let i = 1; i <= 3; i++) {
-            let indicator = document.getElementById('step' + i + '-indicator');
-            if (i === activeStep) {
-                indicator.style.borderBottomColor = 'var(--blue)';
-                indicator.style.color = 'var(--blue)';
-                indicator.style.fontWeight = 'bold';
-            } else if (i < activeStep) {
-                indicator.style.borderBottomColor = 'var(--green)';
-                indicator.style.color = 'var(--green)';
-                indicator.style.fontWeight = 'normal';
-            } else {
-                indicator.style.borderBottomColor = 'var(--base01)';
-                indicator.style.color = 'var(--base01)';
-                indicator.style.fontWeight = 'normal';
-            }
-        }
-    }
-</script>

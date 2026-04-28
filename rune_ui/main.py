@@ -151,65 +151,6 @@ async def get_active_suites(request: Request) -> str:
     return '<div class="card"><p>No active suites found. Create one above to start parallel benchmarking.</p></div>'
 
 
-@app.get("/api/jobs/count", response_class=HTMLResponse)
-async def get_active_job_count(request: Request) -> str:
-    """Return the raw count of active jobs for the sidebar badge."""
-    try:
-        reports_data = await api_client.get_reports()
-        events = reports_data.get("events", [])
-        active = [e for e in events if e.get("status") in ["running", "pending"]]
-        return str(len(active))
-    except Exception:
-        return "0"
-
-
-@app.get("/api/jobs/active", response_class=HTMLResponse)
-async def get_active_job_list(request: Request) -> str:
-    """Return HTML cards for all active/pending jobs for the drawer."""
-    try:
-        reports_data = await api_client.get_reports()
-        events = reports_data.get("events", [])
-        active = [e for e in events if e.get("status") in ["running", "pending"]]
-        
-        if not active:
-            return '<p style="color: var(--base01); text-align: center; margin-top: 40px;">No active jobs in queue.</p>'
-            
-        cards = []
-        for job in active:
-            jid = job.get("job_id", "Unknown")
-            status = job.get("status", "unknown")
-            cards.append(
-                f'<div class="mini-job-card">'
-                f'<strong>{jid[:12]}...</strong>'
-                f'<div style="display: flex; justify-content: space-between; margin-top: 5px;">'
-                f'<span style="color: var(--yellow)">{status.upper()}</span>'
-                f'<a href="#" hx-get="/runs/{jid}" hx-target="#main" onclick="toggleDrawer()">Details</a>'
-                f'</div></div>'
-            )
-        return "".join(cards)
-    except Exception:
-        return '<p style="color: var(--red)">Error fetching queue.</p>'
-
-
-@app.get("/secrets", response_class=HTMLResponse)
-async def get_secrets_page(request: Request) -> Any:
-    try:
-        secrets = await api_client.get_secrets()
-        return templates.TemplateResponse(request, "secrets.html", {"secrets": secrets})
-    except Exception:
-        log.exception("Failed to load secrets")
-        return '<div class="card" style="border-color: var(--red)"><h3>Error</h3><p>Unable to load secrets vault.</p></div>'
-
-
-@app.post("/secrets/update", response_class=HTMLResponse)
-async def update_secret(request: Request, key: str = Form(...), value: str = Form(...)) -> Any:
-    try:
-        await api_client.update_secret(key, value)
-        return HTMLResponse(f'<div class="card" style="border-color: var(--green)"><p>Secret <strong>{key}</strong> updated.</p><button hx-get="/secrets" hx-target="#main">Back to Vault</button></div>')
-    except Exception as e:
-        return HTMLResponse(f'<div class="card" style="border-color: var(--red)"><p>Update failed: {e}</p></div>')
-
-
 @app.get("/api/status", response_class=HTMLResponse)
 async def get_status(request: Request) -> str:
     try:
@@ -400,15 +341,6 @@ async def poll_job_status(request: Request, job_id: str) -> str:
         log.exception("Polling failed for job %s", job_id)
         return '<p style="color: var(--red)">Error polling status. Please retry.</p>'
 
-@app.delete("/api/jobs/{job_id}", response_class=HTMLResponse)
-async def delete_job(request: Request, job_id: str) -> str:
-    try:
-        await api_client.delete_job(job_id)
-        return '<div class="card" style="border-left: 5px solid var(--red)"><h3>Job Cancelled</h3><p>Status: <span style="color: var(--red)">CANCELLED</span></p></div>'
-    except Exception:
-        log.exception("Cancel failed for job %s", job_id)
-        return '<p style="color: var(--red)">Error cancelling job.</p>'
-
 
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request) -> Any:
@@ -417,36 +349,20 @@ async def dashboard(request: Request) -> Any:
         events = reports_data.get("events", [])
         
         labels = []
-        cloud_costs = []
-        local_costs = []
+        data_points = []
         for ev in events:
             labels.append(ev.get("job_id", "Unknown"))
-            cost = float(ev.get("cost_usd", 0.0) or 0.0)
-            if ev.get("backend_type", "cloud") == "local":
-                local_costs.append(cost)
-                cloud_costs.append(0.0)
-            else:
-                local_costs.append(0.0)
-                cloud_costs.append(cost)
+            data_points.append(ev.get("duration_ms", 0) / 1000)
             
         chart_data = {
             "labels": labels,
-            "datasets": [
-                {
-                    "label": "Cloud Execution Cost (USD)",
-                    "data": cloud_costs,
-                    "backgroundColor": "rgba(52, 211, 153, 0.5)",
-                    "borderColor": "rgba(52, 211, 153, 1)",
-                    "borderWidth": 1
-                },
-                {
-                    "label": "Local Execution Cost (USD)",
-                    "data": local_costs,
-                    "backgroundColor": "rgba(99, 102, 241, 0.5)",
-                    "borderColor": "rgba(99, 102, 241, 1)",
-                    "borderWidth": 1
-                }
-            ]
+            "datasets": [{
+                "label": "Duration (s)",
+                "data": data_points,
+                "backgroundColor": "rgba(99, 102, 241, 0.5)",
+                "borderColor": "rgba(99, 102, 241, 1)",
+                "borderWidth": 1
+            }]
         }
         return templates.TemplateResponse(request, "dashboard.html", {"chart_data": chart_data, "events": events})
     except Exception:
@@ -459,33 +375,21 @@ async def compare(request: Request) -> Any:
         reports_data = await api_client.get_reports()
         events = reports_data.get("events", [])
         
-        datasets = []
-        tiers = {}
+        labels = []
+        data_points = []
         for ev in events:
-            tier = ev.get("tier", "Unknown")
-            if tier not in tiers:
-                tiers[tier] = []
-            cost = float(ev.get("cost_usd", 0.0) or 0.0)
-            score = float(ev.get("score", 0.0) or 0.0)
-            tiers[tier].append({
-                "x": cost,
-                "y": score,
-                "r": 8,
-                "agent": ev.get("agent", "Unknown")
-            })
-
-        colors = ["rgba(99, 102, 241, 0.5)", "rgba(52, 211, 153, 0.5)", "rgba(255, 99, 132, 0.5)", "rgba(255, 159, 64, 0.5)"]
-        for i, (tier, data) in enumerate(tiers.items()):
-            datasets.append({
-                "label": f"Tier {tier}",
-                "data": data,
-                "backgroundColor": colors[i % len(colors)],
-                "borderColor": colors[i % len(colors)].replace("0.5", "1"),
-                "borderWidth": 1
-            })
+            labels.append(ev.get("job_id", "Unknown"))
+            data_points.append(ev.get("duration_ms", 0) / 1000)
             
         chart_data = {
-            "datasets": datasets
+            "labels": labels,
+            "datasets": [{
+                "label": "Duration (s)",
+                "data": data_points,
+                "backgroundColor": "rgba(52, 211, 153, 0.5)",
+                "borderColor": "rgba(52, 211, 153, 1)",
+                "borderWidth": 1
+            }]
         }
         return templates.TemplateResponse(request, "compare.html", {"chart_data": chart_data, "events": events})
     except Exception:
@@ -634,16 +538,6 @@ async def view_report(request: Request, job_id: str) -> Any:
     except Exception:
         log.exception("Failed to load report %s", job_id)
         return '<div class="card" style="border-color: var(--red)"><h3>Report Error</h3><p>Unable to load report.</p></div>'
-
-@app.get("/api/reports/{job_id}/export/json", response_class=JSONResponse)
-async def export_report_json(job_id: str) -> Any:
-    """Export the raw JSON of a benchmark report."""
-    try:
-        report = await api_client.get_report_content(job_id)
-        return JSONResponse(content=report, headers={"Content-Disposition": f'attachment; filename="rune-report-{job_id}.json"'})
-    except Exception:
-        log.exception("Failed to export report %s", job_id)
-        return JSONResponse(status_code=404, content={"error": "Report not found"})
 
 @app.get("/runs/{run_id}", response_class=HTMLResponse)
 async def run_detail_view(request: Request, run_id: str) -> Any:
