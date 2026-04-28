@@ -45,7 +45,7 @@ jobs:
     secrets: inherit
 
   integration:
-    uses: lpasquali/rune-ci/.github/workflows/python-integration.yml@144ef855dbf0420e5d9a8de2c8d8f89c2e789265
+    uses: lpasquali/rune-ci/.github/workflows/python-integration.yml@182398cc58c0358d7cd32ab97944ed6c46107a7b
     needs: [changes, python]
     if: needs.changes.outputs.python == 'true'
     with:
