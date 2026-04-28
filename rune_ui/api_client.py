@@ -17,6 +17,25 @@ class RuneApiClient:
         if token:
             self.headers["Authorization"] = f"Bearer {token}"
 
+    async def get_secrets(self) -> Dict[str, Any]:
+        """Fetch current active secret names (masked)."""
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{self.base_url}/v1/settings/secrets",
+                headers=self.headers,
+            )
+            return dict(response.json())
+
+    async def update_secret(self, key: str, value: str) -> Dict[str, Any]:
+        """Update a specific secret."""
+        async with httpx.AsyncClient() as client:
+            response = await client.put(
+                f"{self.base_url}/v1/settings/secrets",
+                headers=self.headers,
+                json={"key": key, "value": value},
+            )
+            return dict(response.json())
+
     async def get_health(self) -> Dict[str, Any]:
         async with httpx.AsyncClient() as client:
             response = await client.get(f"{self.base_url}/healthz")
@@ -29,6 +48,17 @@ class RuneApiClient:
                 f"{self.base_url}/v1/catalog/vastai-models",
                 headers=self.headers,
             )
+            return dict(response.json())
+
+    async def get_backend_models(self, backend_type: str, backend_url: str = "") -> Dict[str, Any]:
+        """Fetch available models for a specific backend type and URL."""
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{self.base_url}/v1/llm/models",
+                headers=self.headers,
+                params={"backend_type": backend_type, "backend_url": backend_url},
+            )
+            response.raise_for_status()
             return dict(response.json())
 
     async def get_estimate(self, payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -58,6 +88,15 @@ class RuneApiClient:
                 f"{self.base_url}/v1/jobs/{job_id}",
                 headers=self.headers,
             )
+            return dict(response.json())
+
+    async def delete_job(self, job_id: str) -> Dict[str, Any]:
+        async with httpx.AsyncClient() as client:
+            response = await client.delete(
+                f"{self.base_url}/v1/jobs/{job_id}",
+                headers=self.headers,
+            )
+            response.raise_for_status()
             return dict(response.json())
 
     async def get_reports(self) -> Dict[str, Any]:
@@ -107,13 +146,21 @@ class RuneApiClient:
             )
             return dict(response.json())
 
-    async def get_finops_simulation(self, agent: str, model: str, gpu: str) -> Dict[str, Any]:
-        """Fetch cost projection simulation."""
+    async def get_finops_simulation(
+        self, agent: str, model: str, gpu: str, runs_per_period: int = 1, period_days: int = 1
+    ) -> Dict[str, Any]:
+        """Fetch cost projection simulation with period scaling."""
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 f"{self.base_url}/v1/finops/simulate",
                 headers=self.headers,
-                params={"agent": agent, "model": model, "gpu": gpu},
+                params={
+                    "agent": agent, 
+                    "model": model, 
+                    "gpu": gpu,
+                    "runs_per_period": runs_per_period,
+                    "period_days": period_days
+                },
             )
             response.raise_for_status()
             return dict(response.json())
