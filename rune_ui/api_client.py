@@ -90,6 +90,15 @@ class RuneApiClient:
             )
             return dict(response.json())
 
+    async def delete_job(self, job_id: str) -> Dict[str, Any]:
+        async with httpx.AsyncClient() as client:
+            response = await client.delete(
+                f"{self.base_url}/v1/jobs/{job_id}",
+                headers=self.headers,
+            )
+            response.raise_for_status()
+            return dict(response.json())
+
     async def get_reports(self) -> Dict[str, Any]:
         """Fetch list of completed reports from the Brain."""
         async with httpx.AsyncClient() as client:

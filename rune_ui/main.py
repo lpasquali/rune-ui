@@ -400,6 +400,15 @@ async def poll_job_status(request: Request, job_id: str) -> str:
         log.exception("Polling failed for job %s", job_id)
         return '<p style="color: var(--red)">Error polling status. Please retry.</p>'
 
+@app.delete("/api/jobs/{job_id}", response_class=HTMLResponse)
+async def delete_job(request: Request, job_id: str) -> str:
+    try:
+        await api_client.delete_job(job_id)
+        return '<div class="card" style="border-left: 5px solid var(--red)"><h3>Job Cancelled</h3><p>Status: <span style="color: var(--red)">CANCELLED</span></p></div>'
+    except Exception:
+        log.exception("Cancel failed for job %s", job_id)
+        return '<p style="color: var(--red)">Error cancelling job.</p>'
+
 
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request) -> Any:
@@ -408,20 +417,36 @@ async def dashboard(request: Request) -> Any:
         events = reports_data.get("events", [])
         
         labels = []
-        data_points = []
+        cloud_costs = []
+        local_costs = []
         for ev in events:
             labels.append(ev.get("job_id", "Unknown"))
-            data_points.append(ev.get("duration_ms", 0) / 1000)
+            cost = float(ev.get("cost_usd", 0.0) or 0.0)
+            if ev.get("backend_type", "cloud") == "local":
+                local_costs.append(cost)
+                cloud_costs.append(0.0)
+            else:
+                local_costs.append(0.0)
+                cloud_costs.append(cost)
             
         chart_data = {
             "labels": labels,
-            "datasets": [{
-                "label": "Duration (s)",
-                "data": data_points,
-                "backgroundColor": "rgba(99, 102, 241, 0.5)",
-                "borderColor": "rgba(99, 102, 241, 1)",
-                "borderWidth": 1
-            }]
+            "datasets": [
+                {
+                    "label": "Cloud Execution Cost (USD)",
+                    "data": cloud_costs,
+                    "backgroundColor": "rgba(52, 211, 153, 0.5)",
+                    "borderColor": "rgba(52, 211, 153, 1)",
+                    "borderWidth": 1
+                },
+                {
+                    "label": "Local Execution Cost (USD)",
+                    "data": local_costs,
+                    "backgroundColor": "rgba(99, 102, 241, 0.5)",
+                    "borderColor": "rgba(99, 102, 241, 1)",
+                    "borderWidth": 1
+                }
+            ]
         }
         return templates.TemplateResponse(request, "dashboard.html", {"chart_data": chart_data, "events": events})
     except Exception:
@@ -434,21 +459,33 @@ async def compare(request: Request) -> Any:
         reports_data = await api_client.get_reports()
         events = reports_data.get("events", [])
         
-        labels = []
-        data_points = []
+        datasets = []
+        tiers = {}
         for ev in events:
-            labels.append(ev.get("job_id", "Unknown"))
-            data_points.append(ev.get("duration_ms", 0) / 1000)
+            tier = ev.get("tier", "Unknown")
+            if tier not in tiers:
+                tiers[tier] = []
+            cost = float(ev.get("cost_usd", 0.0) or 0.0)
+            score = float(ev.get("score", 0.0) or 0.0)
+            tiers[tier].append({
+                "x": cost,
+                "y": score,
+                "r": 8,
+                "agent": ev.get("agent", "Unknown")
+            })
+
+        colors = ["rgba(99, 102, 241, 0.5)", "rgba(52, 211, 153, 0.5)", "rgba(255, 99, 132, 0.5)", "rgba(255, 159, 64, 0.5)"]
+        for i, (tier, data) in enumerate(tiers.items()):
+            datasets.append({
+                "label": f"Tier {tier}",
+                "data": data,
+                "backgroundColor": colors[i % len(colors)],
+                "borderColor": colors[i % len(colors)].replace("0.5", "1"),
+                "borderWidth": 1
+            })
             
         chart_data = {
-            "labels": labels,
-            "datasets": [{
-                "label": "Duration (s)",
-                "data": data_points,
-                "backgroundColor": "rgba(52, 211, 153, 0.5)",
-                "borderColor": "rgba(52, 211, 153, 1)",
-                "borderWidth": 1
-            }]
+            "datasets": datasets
         }
         return templates.TemplateResponse(request, "compare.html", {"chart_data": chart_data, "events": events})
     except Exception:

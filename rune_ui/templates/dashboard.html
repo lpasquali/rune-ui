@@ -1,6 +1,6 @@
 <div class="card">
-    <h2>Dashboard</h2>
-    <p>System Overview & Recent Runs</p>
+    <h2>Dashboard TCO Aggregation</h2>
+    <p>Multi-repo Spending & Recent Runs</p>
 
     <div style="margin-top: 20px; margin-bottom: 20px; height: 300px; width: 100%;">
         <canvas id="costChart"></canvas>
@@ -12,7 +12,7 @@
             <tr>
                 <th>Job ID</th>
                 <th>Status</th>
-                <th>Duration (ms)</th>
+                <th>Cost (USD)</th>
             </tr>
         </thead>
         <tbody>
@@ -20,7 +20,7 @@
             <tr>
                 <td>{{ event.job_id | default("N/A") }}</td>
                 <td>{{ event.status | default("N/A") }}</td>
-                <td>{{ event.duration_ms | default(0) }}</td>
+                <td>{{ event.cost_usd | default("0.00") }}</td>
             </tr>
             {% else %}
             <tr>
@@ -46,8 +46,17 @@
                         legend: { labels: { color: 'var(--base0)' } }
                     },
                     scales: {
-                        x: { ticks: { color: 'var(--base0)' }, grid: { color: 'var(--base02)' } },
-                        y: { ticks: { color: 'var(--base0)' }, grid: { color: 'var(--base02)' } }
+                        x: { 
+                            stacked: true,
+                            ticks: { color: 'var(--base0)' }, 
+                            grid: { color: 'var(--base02)' } 
+                        },
+                        y: { 
+                            stacked: true,
+                            ticks: { color: 'var(--base0)' }, 
+                            grid: { color: 'var(--base02)' },
+                            title: { display: true, text: 'Cost (USD)', color: 'var(--base0)' }
+                        }
                     }
                 }
             });

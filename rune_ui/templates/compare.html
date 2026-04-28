@@ -1,6 +1,6 @@
 <div class="card" style="border-top: 5px solid var(--green);">
     <h2>Decision Matrix</h2>
-    <p>Contextual comparison of recent agent runs to identify the best price/performance ratio.</p>
+    <p>Performance Heatmap (Accuracy vs. Cost) & contextual comparison.</p>
 
     {% if events %}
     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin: 30px 0;">
@@ -22,7 +22,7 @@
     </div>
     {% endif %}
 
-    <div style="margin-top: 20px; margin-bottom: 20px; height: 300px; width: 100%;">
+    <div style="margin-top: 20px; margin-bottom: 20px; height: 400px; width: 100%;">
         <canvas id="compareChart"></canvas>
     </div>
 
@@ -31,17 +31,17 @@
         <thead>
             <tr>
                 <th>Job ID</th>
-                <th>Status</th>
+                <th>Agent</th>
                 <th>Score</th>
                 <th>Duration</th>
-                <th>Cost (est)</th>
+                <th>Cost (USD)</th>
             </tr>
         </thead>
         <tbody>
             {% for event in events %}
             <tr>
                 <td><code>{{ event.job_id }}</code></td>
-                <td><span class="badge" style="background: var(--base01)">{{ event.status }}</span></td>
+                <td><span class="badge" style="background: var(--base01)">{{ event.agent | default(event.status) }}</span></td>
                 <td style="font-weight: 800; color: var(--green)">{{ event.score | default(0.0) }}</td>
                 <td>{{ event.duration_ms / 1000 if event.duration_ms else 0 }}s</td>
                 <td style="color: var(--yellow)">${{ "%.4f"|format(event.cost_usd|float if event.cost_usd else 0.0) }}</td>
@@ -61,17 +61,35 @@
             }
             const ctx = document.getElementById('compareChart').getContext('2d');
             window.compareChart = new Chart(ctx, {
-                type: 'bar',
+                type: 'bubble',
                 data: {{ chart_data | tojson | safe }},
                 options: { 
                     responsive: true, 
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { labels: { color: 'var(--base0)' } }
+                        legend: { labels: { color: 'var(--base0)' } },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const point = context.raw;
+                                    return point.agent + ": Cost $" + point.x + ", Score " + point.y;
+                                }
+                            }
+                        }
                     },
                     scales: {
-                        x: { ticks: { color: 'var(--base0)' }, grid: { color: 'var(--base02)' } },
-                        y: { ticks: { color: 'var(--base0)' }, grid: { color: 'var(--base02)' } }
+                        x: { 
+                            ticks: { color: 'var(--base0)' }, 
+                            grid: { color: 'var(--base02)' },
+                            title: { display: true, text: 'Execution Cost (USD)', color: 'var(--base0)' }
+                        },
+                        y: { 
+                            ticks: { color: 'var(--base0)' }, 
+                            grid: { color: 'var(--base02)' },
+                            title: { display: true, text: 'Accuracy Score (0-100)', color: 'var(--base0)' },
+                            min: 0,
+                            max: 100
+                        }
                     }
                 }
             });
