@@ -2,6 +2,11 @@
 
 The web-based user interface for the RUNE platform.
 
+## ✨ Latest Features
+- **Visual AI Results**: Automatic rendering of image outputs from creative agents (Midjourney, Krea).
+- **Multi-Cloud Cost Wizard**: Interactive pre-flight budget and cost estimation for AWS/GCP/Azure.
+- **Trace Streaming**: Real-time SSE logs for agentic chain execution.
+
 ## 📖 Documentation
 All documentation is consolidated in the **[RUNE Documentation Site](https://lpasquali.github.io/rune-docs/)**.
 

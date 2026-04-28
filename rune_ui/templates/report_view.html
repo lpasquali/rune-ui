@@ -5,6 +5,14 @@
 
     <div class="card" style="margin-top: 20px; border-color: var(--base01)">
         <h3>Analysis & Result</h3>
+        
+        {% if report.result and report.result.get('result_type') == 'image' %}
+        <div style="margin-bottom: 20px; text-align: center;">
+            <img src="{{ report.result.get('answer') }}" alt="AI Generated Image" style="max-width: 100%; border: 1px solid var(--base02); border-radius: 4px;">
+            <p style="color: var(--base1); margin-top: 10px;">{{ report.result.get('answer') }}</p>
+        </div>
+        {% endif %}
+
         <pre style="background: var(--base03); color: var(--base1); padding: 15px; overflow-x: auto; border: 1px solid var(--base02)">{{ report.result | tojson(indent=2) }}</pre>
     </div>
 
