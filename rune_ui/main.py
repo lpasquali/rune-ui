@@ -13,12 +13,13 @@ import secrets
 import time
 from typing import Any, AsyncGenerator
 
-from fastapi import FastAPI, Form, Request
+from fastapi import FastAPI, Form, Request, Response
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from rune_ui.api_client import RuneApiClient
+from rune_bench.common.models import get_default_models
 
 log = logging.getLogger(__name__)
 
@@ -149,6 +150,11 @@ async def create_suite(
 async def get_active_suites(request: Request) -> str:
     # Return a mock or real list of suites
     return '<div class="card"><p>No active suites found. Create one above to start parallel benchmarking.</p></div>'
+
+
+@app.get("/api/models/default")
+async def get_default_models_route(backend_type: str = "ollama") -> Any:
+    return {"models": get_default_models(backend_type)}
 
 
 @app.get("/api/status", response_class=HTMLResponse)
@@ -448,12 +454,68 @@ async def switch_profile(request: Request, profile: str = Form(...)) -> Any:
         log.exception("Failed to switch profile")
         return HTMLResponse('<div class="card" style="border-color: var(--red)"><p>Error: Failed to switch profile.</p></div>')
 
+
 @app.post("/config/update", response_class=HTMLResponse)
-async def update_config(request: Request, backend_type: str = Form(...), backend_url: str = Form(""), model: str = Form(...)) -> Any:
+async def update_config(request: Request) -> Any:
     try:
-        payload = {"config": {"backend_type": backend_type, "backend_url": backend_url, "model": model}}
+        form = await request.form()
+        profile = form.get("profile")
+        
+        # Build settings dict from form data
+        settings = {}
+        
+        # Helper to get typed values
+        def get_bool(key): return form.get(key) == "true"
+        def get_float(key, default=None): 
+            val = form.get(key)
+            return float(val) if val and val.strip() else default
+        def get_int(key, default=None):
+            val = form.get(key)
+            return int(val) if val and val.strip() else default
+
+        # Map all fields
+        fields = [
+            "backend", "api_base_url", "api_tenant", "model", "agent", 
+            "backend_type", "backend_url", "kubeconfig", "template_hash"
+        ]
+        for f in fields:
+            if f in form: settings[f] = form.get(f)
+
+        # Booleans
+        settings["vastai"] = get_bool("vastai")
+        settings["vastai_stop_instance"] = get_bool("vastai_stop_instance")
+        settings["backend_warmup"] = get_bool("backend_warmup")
+        settings["debug"] = get_bool("debug")
+        settings["insecure"] = get_bool("insecure")
+
+        # Numbers
+        settings["max_dph"] = get_float("max_dph")
+        settings["min_dph"] = get_float("min_dph")
+        settings["reliability"] = get_float("reliability")
+        settings["backend_warmup_timeout"] = get_int("backend_warmup_timeout")
+
+        # Nested Attestation
+        attestation = {}
+        if "attestation_driver" in form: attestation["driver"] = form.get("attestation_driver")
+        if "pcr_policy_path" in form: attestation["pcr_policy_path"] = form.get("pcr_policy_path")
+        if attestation: settings["attestation"] = attestation
+
+        payload = {
+            "settings": settings,
+            "profile": profile if profile else None,
+        }
         await api_client.update_settings(payload)
         return HTMLResponse('<div class="card" style="border-color: var(--green)"><p>Settings updated successfully.</p><button hx-get="/config" hx-target="#main">Refresh</button></div>')
+    except Exception as e:
+        log.exception("Failed to update settings")
+        return HTMLResponse(f'<div class="card" style="border-color: var(--red)"><p>Error: {e}</p></div>')
+
+
+@app.delete("/config/profiles/{name}", response_class=HTMLResponse)
+async def delete_profile_route(request: Request, name: str) -> Any:
+    try:
+        await api_client.delete_profile(name)
+        return HTMLResponse('<div class="card" style="border-color: var(--green)"><p>Profile deleted successfully.</p><button hx-get="/config" hx-target="#main">Refresh</button></div>')
     except Exception as e:
         return HTMLResponse(f'<div class="card" style="border-color: var(--red)"><p>Error: {e}</p></div>')
 
@@ -464,6 +526,20 @@ async def create_new_profile(request: Request, name: str = Form(...)) -> Any:
         return HTMLResponse('<div class="card" style="border-color: var(--green)"><p>Profile created successfully.</p><button hx-get="/config" hx-target="#main">Refresh</button></div>')
     except Exception as e:
         return HTMLResponse(f'<div class="card" style="border-color: var(--red)"><p>Error: {e}</p></div>')
+
+
+@app.get("/config/export")
+async def export_config(profile: str | None = None) -> Response:
+    try:
+        content = await api_client.export_settings(profile)
+        filename = f"rune-{profile or 'defaults'}.yaml"
+        return Response(
+            content=content,
+            media_type="text/yaml",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+    except Exception as e:
+        return HTMLResponse(f'<div class="card" style="border-color: var(--red)"><p>Export failed: {e}</p></div>')
 
 
 @app.get("/finops", response_class=HTMLResponse)
