@@ -8,6 +8,10 @@ client = TestClient(app)
 @patch("rune_ui.api_client.RuneApiClient.get_finops_simulation", new_callable=AsyncMock)
 def test_simulate_finops(mock_simulate: AsyncMock) -> None:
     mock_simulate.return_value = {
+        "projected_cost_usd": 10.0,
+        "projected_total_usd": 70.0,
+        "period_days": 7,
+        "runs_per_period": 1,
         "total_cost_usd": 10.0,
         "confidence": 0.9,
         "gpu_cost_usd": 5.0,
