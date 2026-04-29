@@ -142,9 +142,33 @@ class RuneApiClient:
             response = await client.post(
                 f"{self.base_url}/v1/settings/profiles",
                 headers=self.headers,
-                json={"name": name, "config": config},
+                json={"name": name, "settings": config},
             )
             return dict(response.json())
+
+    async def delete_profile(self, name: str) -> Dict[str, Any]:
+        """Delete a profile."""
+        async with httpx.AsyncClient() as client:
+            response = await client.delete(
+                f"{self.base_url}/v1/settings/profiles/{name}",
+                headers=self.headers,
+            )
+            return dict(response.json())
+
+    async def export_settings(self, profile: Optional[str] = None) -> bytes:
+        """Export settings as YAML."""
+        params = {}
+        if profile:
+            params["profile"] = profile
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{self.base_url}/v1/settings/export",
+                headers=self.headers,
+                params=params,
+                timeout=30.0,
+            )
+            response.raise_for_status()
+            return response.content
 
     async def get_finops_simulation(
         self, agent: str, model: str, gpu: str, runs_per_period: int = 1, period_days: int = 1

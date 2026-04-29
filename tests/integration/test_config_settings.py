@@ -47,7 +47,12 @@ def test_update_config_success(mock_update):
     response = client.post("/config/update", data={"backend_type": "openai", "backend_url": "url", "model": "gpt-4"})
     assert response.status_code == 200
     assert "Settings updated successfully" in response.text
-    mock_update.assert_called_once_with({"config": {"backend_type": "openai", "backend_url": "url", "model": "gpt-4"}})
+    # Updated to match new settings-centric payload
+    mock_update.assert_called_once()
+    call_args = mock_update.call_args[0][0]
+    assert "settings" in call_args
+    assert call_args["settings"]["backend_type"] == "openai"
+    assert call_args["settings"]["model"] == "gpt-4"
 
 @patch("rune_ui.api_client.RuneApiClient.update_settings", new_callable=AsyncMock)
 def test_update_config_error(mock_update):

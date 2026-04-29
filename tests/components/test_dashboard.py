@@ -28,12 +28,12 @@ def test_dashboard_error(mock_get_reports: AsyncMock) -> None:
 def test_compare_success(mock_get_reports: AsyncMock) -> None:
     mock_get_reports.return_value = {
         "events": [
-            {"job_id": "job2", "status": "failed", "score": 45}
+            {"job_id": "job2", "status": "failed", "score": 45, "duration_ms": 12000}
         ]
     }
     response = client.get("/compare")
     assert response.status_code == 200
-    assert "Agent Compare" in response.text
+    assert "Decision Matrix" in response.text
     assert "job2" in response.text
     assert "compareChart" in response.text
 

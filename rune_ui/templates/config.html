@@ -42,21 +42,41 @@
         <div>
             <h3 style="color: var(--cyan);">Configuration Profiles</h3>
             {% if settings %}
-            <form hx-post="/config/profile" hx-target="#config-feedback" hx-swap="innerHTML" style="margin-bottom: 20px;">
-                <label for="profile_select">Active Profile:</label>
-                <select id="profile_select" name="profile" style="width: 70%; padding: 8px; background: var(--base03); color: var(--base0); border: 1px solid var(--base01);">
-                    {% for p in settings.get('profiles', []) %}
-                        <option value="{{ p }}" {% if p == settings.get('active_profile') %}selected{% endif %}>{{ p }}</option>
-                    {% endfor %}
-                </select>
-                <button type="submit" style="padding: 8px;">Switch</button>
+            <div style="display: flex; gap: 10px; align-items: flex-end; margin-bottom: 20px;">
+                <form hx-post="/config/profile" hx-target="#config-feedback" hx-swap="innerHTML" style="flex-grow: 1;">
+                    <label for="profile_select">Active Profile:</label>
+                    <div style="display: flex; gap: 5px;">
+                        <select id="profile_select" name="profile" style="flex-grow: 1; padding: 8px; background: var(--base03); color: var(--base0); border: 1px solid var(--base01);">
+                            {% for p in settings.get('profiles', []) %}
+                                <option value="{{ p }}" {% if p == settings.get('active_profile') %}selected{% endif %}>{{ p }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" style="padding: 8px;">Switch</button>
+                        <a href="/config/export?profile={{ settings.get('active_profile') or '' }}" target="_blank" style="padding: 8px; background: var(--blue); color: var(--base03); text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 0.9em; display: flex; align-items: center;">Export YAML</a>
+                    </div>
+                </form>
+                
+                {% if settings.get('active_profile') and settings.get('active_profile') not in ['local', 'ci', 'production'] %}
+                <button hx-delete="/config/profiles/{{ settings.get('active_profile') }}" 
+                        hx-confirm="Are you sure you want to delete profile '{{ settings.get('active_profile') }}'?"
+                        hx-target="#config-feedback"
+                        style="padding: 8px; background: var(--red); color: white; border: none; cursor: pointer;">
+                    Delete
+                </button>
+                {% endif %}
+            </div>
+
+            <form hx-post="/config/new_profile" hx-target="#config-feedback" hx-swap="innerHTML" style="margin-bottom: 10px;">
+                <label for="new_profile_name">New Profile Name:</label>
+                <div style="display: flex; gap: 5px;">
+                    <input type="text" id="new_profile_name" name="name" required style="flex-grow: 1; padding: 8px; background: var(--base03); color: var(--base0); border: 1px solid var(--base01);">
+                    <button type="submit" style="padding: 8px;">Create</button>
+                </div>
             </form>
 
-            <form hx-post="/config/new_profile" hx-target="#config-feedback" hx-swap="innerHTML">
-                <label for="new_profile_name">New Profile Name:</label>
-                <input type="text" id="new_profile_name" name="name" required style="width: 70%; padding: 8px; background: var(--base03); color: var(--base0); border: 1px solid var(--base01);">
-                <button type="submit" style="padding: 8px;">Create</button>
-            </form>
+            <div style="margin-top: 15px; border-top: 1px solid var(--base01); padding-top: 10px;">
+                <a href="/config/export" target="_blank" style="display: inline-block; padding: 8px; background: var(--base02); color: var(--base0); text-decoration: none; border-radius: 4px; font-size: 0.85em;">Export Defaults (YAML)</a>
+            </div>
             {% else %}
             <p style="color: var(--yellow);">Settings not available. Backend may be offline.</p>
             {% endif %}
@@ -64,30 +84,179 @@
     </div>
 
     <div id="config-feedback" style="margin-top: 20px;"></div>
+
+<script>
+function toggleVastaiSettings(backendType) {
+    const section = document.getElementById('vastai-config-section');
+    const vastaiHidden = document.getElementById('vastai_hidden');
+    if (backendType === 'vastai') {
+        section.style.display = 'block';
+        vastaiHidden.value = 'true';
+    } else {
+        section.style.display = 'none';
+        vastaiHidden.value = 'false';
+    }
+}
+
+async function loadDefaultModels() {
+    const backendType = document.getElementById('backend_type').value;
+    const container = document.getElementById('model-suggestions');
+    container.innerHTML = 'Loading...';
+    container.style.display = 'block';
+    
+    try {
+        const resp = await fetch(`/api/models/default?backend_type=${backendType}`);
+        const data = await resp.json();
+        const models = data.models || [];
+        
+        container.innerHTML = '<div style="margin-bottom:5px; font-weight:bold;">Suggested Models:</div>';
+        models.forEach(m => {
+            const span = document.createElement('span');
+            span.textContent = m;
+            span.style.cursor = 'pointer';
+            span.style.marginRight = '10px';
+            span.style.padding = '2px 5px';
+            span.style.background = 'var(--base02)';
+            span.style.borderRadius = '4px';
+            span.style.display = 'inline-block';
+            span.style.marginBottom = '3px';
+            span.onclick = () => {
+                document.getElementById('model').value = m;
+                container.style.display = 'none';
+            };
+            container.appendChild(span);
+        });
+        
+        if (models.length === 0) {
+            container.innerHTML = 'No suggestions available.';
+        }
+    } catch (err) {
+        container.innerHTML = 'Error loading suggestions.';
+    }
+}
+</script>
 </div>
 
 {% if settings %}
 <div class="card" style="margin-top: 20px;">
-    <h3 style="color: var(--cyan);">Edit Active Profile ({{ settings.get('active_profile', 'Unknown') }})</h3>
+    <h3 style="color: var(--cyan);">Edit Active Profile ({{ settings.get('active_profile', 'Defaults') }})</h3>
     <form hx-post="/config/update" hx-target="#config-feedback" hx-swap="innerHTML">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
+        <input type="hidden" name="profile" value="{{ settings.get('active_profile', '') }}">
+        
+        <h4 style="border-bottom: 1px solid var(--base01); padding-bottom: 5px; color: var(--blue);">Execution & Backend</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
             <div>
-                <label for="backend_type">Backend Provider:</label>
-                <select id="backend_type" name="backend_type" style="width: 100%; padding: 8px; background: var(--base03); color: var(--base0); border: 1px solid var(--base01);">
+                <label for="backend">RUNE Backend:</label>
+                <select id="backend" name="backend">
+                    <option value="local" {% if settings.get('config', {}).get('backend') == 'local' %}selected{% endif %}>Local (In-Process)</option>
+                    <option value="http" {% if settings.get('config', {}).get('backend') == 'http' %}selected{% endif %}>Remote (RUNE API)</option>
+                </select>
+            </div>
+            <div>
+                <label for="agent">Default Agent:</label>
+                <select id="agent" name="agent">
+                    <option value="holmes" {% if settings.get('config', {}).get('agent') == 'holmes' %}selected{% endif %}>HolmesGPT (SRE)</option>
+                    <option value="k8sgpt" {% if settings.get('config', {}).get('agent') == 'k8sgpt' %}selected{% endif %}>K8sGPT</option>
+                    <option value="comfyui" {% if settings.get('config', {}).get('agent') == 'comfyui' %}selected{% endif %}>ComfyUI (Art)</option>
+                    <option value="browseruse" {% if settings.get('config', {}).get('agent') == 'browseruse' %}selected{% endif %}>BrowserUse</option>
+                </select>
+            </div>
+            <div style="display: flex; align-items: flex-end; padding-bottom: 10px;">
+                <label><input type="checkbox" name="debug" value="true" {% if settings.get('config', {}).get('debug') %}checked{% endif %}> Debug Mode</label>
+            </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+            <div>
+                <label for="backend_type">LLM Provider:</label>
+                <select id="backend_type" name="backend_type" onchange="toggleVastaiSettings(this.value)">
                     <option value="ollama" {% if settings.get('config', {}).get('backend_type') == 'ollama' %}selected{% endif %}>Ollama</option>
                     <option value="openai" {% if settings.get('config', {}).get('backend_type') == 'openai' %}selected{% endif %}>OpenAI</option>
+                    <option value="vastai" {% if settings.get('config', {}).get('backend_type') == 'vastai' %}selected{% endif %}>Vast.ai (Cloud GPU)</option>
                 </select>
             </div>
             <div>
                 <label for="model">Default Model:</label>
-                <input type="text" id="model" name="model" value="{{ settings.get('config', {}).get('model', '') }}" style="width: 100%; padding: 8px; background: var(--base03); color: var(--base0); border: 1px solid var(--base01);">
+                <div style="display: flex; gap: 5px;">
+                    <input type="text" id="model" name="model" value="{{ settings.get('config', {}).get('model', '') }}" style="flex-grow: 1;">
+                    <button type="button" onclick="loadDefaultModels()" style="white-space: nowrap; font-size: 0.7em; padding: 5px;">Suggestions</button>
+                </div>
+                <div id="model-suggestions" style="margin-top: 5px; font-size: 0.8em; display: none; background: var(--base03); border: 1px solid var(--base01); padding: 5px;"></div>
             </div>
         </div>
-        
-        <label for="backend_url">Backend URL:</label>
-        <input type="text" id="backend_url" name="backend_url" value="{{ settings.get('config', {}).get('backend_url', '') }}" style="width: 100%; padding: 8px; margin-bottom: 15px; background: var(--base03); color: var(--base0); border: 1px solid var(--base01);">
 
-        <button type="submit" style="width: 100%; padding: 15px; font-weight: bold; background: var(--green); color: var(--base03); border: none; cursor: pointer;">SAVE SETTINGS</button>
+        <div id="vastai-config-section" style="display: {% if settings.get('config', {}).get('backend_type') == 'vastai' %}block{% else %}none{% endif %}; border: 1px dashed var(--cyan); padding: 15px; margin-bottom: 15px; border-radius: 8px;">
+            <h4 style="color: var(--cyan); margin-top: 0;">Vast.ai Provisioning Settings</h4>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 10px;">
+                <div>
+                    <label for="min_dph">Min $/hr:</label>
+                    <input type="text" id="min_dph" name="min_dph" value="{{ settings.get('config', {}).get('min_dph', '0.0') }}">
+                </div>
+                <div>
+                    <label for="max_dph">Max $/hr:</label>
+                    <input type="text" id="max_dph" name="max_dph" value="{{ settings.get('config', {}).get('max_dph', '2.0') }}">
+                </div>
+                <div>
+                    <label for="reliability">Min Reliability:</label>
+                    <input type="text" id="reliability" name="reliability" value="{{ settings.get('config', {}).get('reliability', '0.9') }}">
+                </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div>
+                    <label for="template_hash">Vast.ai Template Hash:</label>
+                    <input type="text" id="template_hash" name="template_hash" value="{{ settings.get('config', {}).get('template_hash', 'c166c11f035d3a97871a23bd32ca6aba') }}">
+                </div>
+                <div style="display: flex; align-items: flex-end; padding-bottom: 10px;">
+                    <label><input type="checkbox" name="vastai_stop_instance" value="true" {% if settings.get('config', {}).get('vastai_stop_instance') %}checked{% endif %}> Stop Instance on Exit</label>
+                </div>
+            </div>
+            <input type="hidden" name="vastai" id="vastai_hidden" value="{% if settings.get('config', {}).get('backend_type') == 'vastai' %}true{% else %}false{% endif %}">
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+            <div>
+                <label for="backend_url">Backend URL:</label>
+                <input type="text" id="backend_url" name="backend_url" value="{{ settings.get('config', {}).get('backend_url', '') }}">
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div style="display: flex; align-items: flex-end; padding-bottom: 10px;">
+                    <label><input type="checkbox" name="backend_warmup" value="true" {% if settings.get('config', {}).get('backend_warmup') %}checked{% endif %}> Warmup</label>
+                </div>
+                <div>
+                    <label for="backend_warmup_timeout">Timeout (s):</label>
+                    <input type="number" id="backend_warmup_timeout" name="backend_warmup_timeout" value="{{ settings.get('config', {}).get('backend_warmup_timeout', 300) }}">
+                </div>
+            </div>
+        </div>
+
+        <h4 style="border-bottom: 1px solid var(--base01); padding-bottom: 5px; color: var(--blue); margin-top: 20px;">Infrastructure & Security</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+            <div>
+                <label for="kubeconfig">Kubeconfig Path:</label>
+                <input type="text" id="kubeconfig" name="kubeconfig" value="{{ settings.get('config', {}).get('kubeconfig', '') }}">
+            </div>
+            <div>
+                <label for="api_tenant">Tenant ID:</label>
+                <input type="text" id="api_tenant" name="api_tenant" value="{{ settings.get('config', {}).get('api_tenant', '') }}">
+            </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+            <div>
+                <label for="attestation_driver">Attestation Driver:</label>
+                <select id="attestation_driver" name="attestation_driver">
+                    <option value="noop" {% if settings.get('config', {}).get('attestation', {}).get('driver') == 'noop' %}selected{% endif %}>No-op (Local Dev)</option>
+                    <option value="tpm2" {% if settings.get('config', {}).get('attestation', {}).get('driver') == 'tpm2' %}selected{% endif %}>TPM 2.0 (Hardware)</option>
+                </select>
+            </div>
+            <div>
+                <label for="pcr_policy_path">PCR Policy Path:</label>
+                <input type="text" id="pcr_policy_path" name="pcr_policy_path" value="{{ settings.get('config', {}).get('attestation', {}).get('pcr_policy_path', '') }}">
+            </div>
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label><input type="checkbox" name="insecure" value="true" {% if settings.get('config', {}).get('insecure') %}checked{% endif %}> Insecure (Skip TLS Verification)</label>
+        </div>
+
+        <button type="submit" style="width: 100%; padding: 15px; font-weight: bold; background: var(--green); color: var(--base03); border: none; cursor: pointer; margin-top: 10px;">SAVE ALL CONFIGURATION</button>
     </form>
 </div>
 {% endif %}
