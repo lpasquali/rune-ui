@@ -154,7 +154,7 @@ async def create_suite(
     agent_list = [a.strip() for a in agents.split(",")]
     model_list = [m.strip() for m in models.split(",")]
     
-    suite_manifest = {
+    _suite_manifest = {
         "apiVersion": "bench.rune.ai/v1alpha1",
         "kind": "RuneBenchmarkSuite",
         "metadata": {"name": f"suite-{int(time.time())}"},
@@ -507,7 +507,8 @@ async def update_config(request: Request) -> Any:
             "backend_type", "backend_url", "kubeconfig", "template_hash"
         ]
         for f in fields:
-            if f in form: settings[f] = form.get(f)
+            if f in form:
+                settings[f] = form.get(f)
 
         # Booleans
         settings["vastai"] = get_bool("vastai")
@@ -524,9 +525,12 @@ async def update_config(request: Request) -> Any:
 
         # Nested Attestation
         attestation = {}
-        if "attestation_driver" in form: attestation["driver"] = form.get("attestation_driver")
-        if "pcr_policy_path" in form: attestation["pcr_policy_path"] = form.get("pcr_policy_path")
-        if attestation: settings["attestation"] = attestation
+        if "attestation_driver" in form:
+            attestation["driver"] = form.get("attestation_driver")
+        if "pcr_policy_path" in form:
+            attestation["pcr_policy_path"] = form.get("pcr_policy_path")
+        if attestation:
+            settings["attestation"] = attestation
 
         payload = {
             "settings": settings,
