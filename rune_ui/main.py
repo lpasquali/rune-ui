@@ -19,9 +19,37 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from rune_ui.api_client import RuneApiClient
-from rune_bench.common.models import get_default_models
 
 log = logging.getLogger(__name__)
+
+# Popular official Ollama models for self-hosted installations
+_OLLAMA_DEFAULT_MODELS = [
+    "llama3.1:8b",
+    "llama3.1:70b",
+    "mistral:7b",
+    "mixtral:8x7b",
+    "phi3:mini",
+    "codellama:7b",
+    "deepseek-coder:6.7b",
+    "gemma2:9b",
+]
+
+_OPENAI_DEFAULT_MODELS = [
+    "gpt-4o",
+    "gpt-4o-mini",
+    "gpt-4-turbo",
+    "gpt-3.5-turbo",
+]
+
+_BACKEND_MODEL_REGISTRY: dict[str, list[str]] = {
+    "ollama": _OLLAMA_DEFAULT_MODELS,
+    "openai": _OPENAI_DEFAULT_MODELS,
+    "vastai": _OLLAMA_DEFAULT_MODELS,
+}
+
+def get_default_models(backend_type: str) -> list[str]:
+    """Return a list of model names for the given backend."""
+    return _BACKEND_MODEL_REGISTRY.get(backend_type.lower(), [])
 
 app = FastAPI(title="RUNE UI")
 BASE_DIR = Path(__file__).parent.resolve()
