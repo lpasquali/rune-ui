@@ -26,6 +26,7 @@ Issues = "https://github.com/lpasquali/rune-ui/issues"
 dev = [
     "pytest",
     "pytest-cov",
+    "pytest-asyncio",
     "ruff",
     "mypy",
     "bandit",
