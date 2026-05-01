@@ -19,9 +19,37 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from rune_ui.api_client import RuneApiClient
-from rune_bench.common.models import get_default_models
 
 log = logging.getLogger(__name__)
+
+# Popular official Ollama models for self-hosted installations
+_OLLAMA_DEFAULT_MODELS = [
+    "llama3.1:8b",
+    "llama3.1:70b",
+    "mistral:7b",
+    "mixtral:8x7b",
+    "phi3:mini",
+    "codellama:7b",
+    "deepseek-coder:6.7b",
+    "gemma2:9b",
+]
+
+_OPENAI_DEFAULT_MODELS = [
+    "gpt-4o",
+    "gpt-4o-mini",
+    "gpt-4-turbo",
+    "gpt-3.5-turbo",
+]
+
+_BACKEND_MODEL_REGISTRY: dict[str, list[str]] = {
+    "ollama": _OLLAMA_DEFAULT_MODELS,
+    "openai": _OPENAI_DEFAULT_MODELS,
+    "vastai": _OLLAMA_DEFAULT_MODELS,
+}
+
+def get_default_models(backend_type: str) -> list[str]:
+    """Return a list of model names for the given backend."""
+    return _BACKEND_MODEL_REGISTRY.get(backend_type.lower(), [])
 
 app = FastAPI(title="RUNE UI")
 BASE_DIR = Path(__file__).parent.resolve()
@@ -126,7 +154,7 @@ async def create_suite(
     agent_list = [a.strip() for a in agents.split(",")]
     model_list = [m.strip() for m in models.split(",")]
     
-    suite_manifest = {
+    _suite_manifest = {
         "apiVersion": "bench.rune.ai/v1alpha1",
         "kind": "RuneBenchmarkSuite",
         "metadata": {"name": f"suite-{int(time.time())}"},
@@ -479,7 +507,8 @@ async def update_config(request: Request) -> Any:
             "backend_type", "backend_url", "kubeconfig", "template_hash"
         ]
         for f in fields:
-            if f in form: settings[f] = form.get(f)
+            if f in form:
+                settings[f] = form.get(f)
 
         # Booleans
         settings["vastai"] = get_bool("vastai")
@@ -496,9 +525,12 @@ async def update_config(request: Request) -> Any:
 
         # Nested Attestation
         attestation = {}
-        if "attestation_driver" in form: attestation["driver"] = form.get("attestation_driver")
-        if "pcr_policy_path" in form: attestation["pcr_policy_path"] = form.get("pcr_policy_path")
-        if attestation: settings["attestation"] = attestation
+        if "attestation_driver" in form:
+            attestation["driver"] = form.get("attestation_driver")
+        if "pcr_policy_path" in form:
+            attestation["pcr_policy_path"] = form.get("pcr_policy_path")
+        if attestation:
+            settings["attestation"] = attestation
 
         payload = {
             "settings": settings,
