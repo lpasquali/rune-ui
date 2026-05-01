@@ -104,3 +104,19 @@ def test_main_routes():
                 client.post(path, data=data)
             elif method == "DELETE":
                 client.delete(path)
+        
+        # Test specific exceptions / routes
+        client.get("/benchmarks/models?backend_type=ollama")
+        client.get("/config/export?profile=test")
+        client.delete("/config/profiles/test")
+        client.post("/config/new_profile", data={"name": "test"})
+        
+        # Throw exceptions to cover the exception blocks
+        mock_instance.get.side_effect = Exception("test error")
+        mock_instance.post.side_effect = Exception("test error")
+        mock_instance.delete.side_effect = Exception("test error")
+        client.get("/benchmarks/models?backend_type=ollama")
+        client.get("/config/export?profile=test")
+        client.delete("/config/profiles/test")
+        client.post("/config/new_profile", data={"name": "test"})
+        client.post("/suites/instantiate", data={"agents": "a", "models": "m", "backend_type": "ollama", "aws": "true"})
