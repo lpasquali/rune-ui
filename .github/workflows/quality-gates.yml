@@ -61,7 +61,7 @@ jobs:
       push: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
 
   guard:
-    uses: lpasquali/rune-ci/.github/workflows/nginx-ingress-guard.yml@36eba801cb73e7b613ef1ee33bb3f618928a5952
+    uses: lpasquali/rune-ci/.github/workflows/nginx-ingress-guard.yml@72ffc70b5253c30afd47b06e81eff3f9b08c04c8
 
   compliance:
     needs: [security, python, integration, container, guard]
