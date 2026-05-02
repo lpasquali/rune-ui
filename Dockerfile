@@ -9,7 +9,7 @@ WORKDIR /app
 COPY pyproject.toml README.md LICENSE ./
 COPY rune_ui/ rune_ui/
 
-RUN pip install --no-cache-dir pip==26.0 \
+RUN pip install --no-cache-dir pip>=26.1 \
  && pip install --no-cache-dir --prefer-binary .
 
 FROM python:3.14-slim
